@@ -1,0 +1,9 @@
+#PBS -V
+#PBS -l mppwidth=1
+#PBS -l walltime=0:10:00
+#PBS -o serial.stdout
+#PBS -j oe
+#PBS -A mp309
+
+cd $PBS_O_WORKDIR
+aprun -n 1 ./serial test
