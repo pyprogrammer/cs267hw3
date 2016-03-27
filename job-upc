@@ -1,19 +1,21 @@
-#PBS -V
-#PBS -l mppwidth=24
-#PBS -l walltime=0:10:00
-#PBS -o upc.stdout
-#PBS -j oe
-#PBS -A mp309
+#!/bin/bash -l 
+#SBATCH -p debug
+#SBATCH -N 1
+#SBATCH -t 00:10:00 
+#SBATCH -J upc-HW3
+#SBATCH -o upc-HW3.%j.out
+#SBATCH -e upc-HW3.%j.err
 
 # Parameters
 P=3				# Number of UPC processes to run
 INPUT=test		# Path to your input file
 
-cd $PBS_O_WORKDIR
+cd ${PWD}
 
 # Run program
-aprun -n 1 ./serial ${INPUT}
+srun -n 1 ./serial ${INPUT}
 upcrun -n $P -shared-heap=1G ./pgen ${INPUT}
+
 
 # Sort contigs in both output files to compare
 sort serial.out > serial.sorted
@@ -23,3 +25,5 @@ sort pgen.out > pgen.sorted
 # It will say "Files <file1> and <file2> differ" otherwise.
 # Hint: remove -q option to show the lines that differ (not recommended when your output file is large)
 diff -q serial.sorted pgen.sorted
+
+

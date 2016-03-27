@@ -1,14 +1,15 @@
-#PBS -V
-#PBS -l mppwidth=192
-#PBS -l walltime=0:20:00
-#PBS -o multi.stdout
-#PBS -j oe
-#PBS -A mp309
+#!/bin/bash -l 
+#SBATCH -p debug
+#SBATCH -N 8
+#SBATCH -t 00:20:00 
+#SBATCH -J multi-HW3
+#SBATCH -o multi-HW3.%j.out
+#SBATCH -e multi-HW3.%j.err
 
 # Specify path to your input file here
 INPUT=test
 
-cd $PBS_O_WORKDIR
+cd ${PWD}
 for P in 96 120 144 168 192; do
-	aprun -n $P -shared-heap=1G ./pgen ${INPUT}
+	srun -n $P -shared-heap=1G ./pgen ${INPUT}
 done

@@ -1,9 +1,11 @@
-#PBS -V
-#PBS -l mppwidth=1
-#PBS -l walltime=0:10:00
-#PBS -o serial.stdout
-#PBS -j oe
-#PBS -A mp309
+#!/bin/bash -l 
+#SBATCH -p debug
+#SBATCH -N 1
+#SBATCH -t 00:10:00 
+#SBATCH -J serial-HW3
+#SBATCH -o serial-HW3.%j.out
+#SBATCH -e serial-HW3.%j.err
 
-cd $PBS_O_WORKDIR
-aprun -n 1 ./serial test
+cd ${PWD}
+srun -n 1 ./serial test
+
