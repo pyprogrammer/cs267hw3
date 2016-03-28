@@ -17,6 +17,7 @@ int main(int argc, char *argv[]){
   /** Declarations **/
   double inputTime=0.0, constrTime=0.0, traversalTime=0.0;
   
+  
   /** Read input **/
   upc_barrier;
   inputTime -= gettime();

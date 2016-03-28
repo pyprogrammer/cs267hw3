@@ -3,6 +3,8 @@
 #ifndef UTILH
 #define UTILH
 
+#define HASH_DEPTH 2 // 2 chars deep for the hash.
+
 // KMER_LENGTH
 // since we pack 1 base -> 2 bits, we have a total of KMER_LENGTH * 2 / 8 = KMER_LENGTH/4 bytes, rounded up.
 typedef struct {
@@ -48,5 +50,23 @@ void print_to_file(pkentry_t* start, FILE* fp)
 	}
 }
 
+
+// hashtable shenanigans
+
+uint64_t hash(pkentry_t* pke)
+{ // hashing order goes first char, back ext, rest of str.
+	uint64_t h = pke->ext >> 4;
+	if (KMER_PACKED_LENGTH < 8) {
+		uint64_t t = 0;
+		for (int i = 0; i < KMER_PACKED_LENGTH; i++)
+		{
+			t |= pke->data[i] << (i*8);
+		}
+		return (t << 3) | h;
+	} else {
+		uint64_t* d = (uint64_t*) &pke->data;
+		return (*d << 3) | h;
+	}
+}
 
 #endif
