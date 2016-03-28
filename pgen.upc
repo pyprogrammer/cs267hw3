@@ -9,6 +9,7 @@
 #include "packingDNAseq.h"
 #include "kmer_hash.h"
 
+#include "util.h"
 
 
 int main(int argc, char *argv[]){
