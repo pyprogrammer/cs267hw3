@@ -69,4 +69,50 @@ uint64_t hash(pkentry_t* pke)
 	}
 }
 
+uint8_t char_to_num(char c)
+{
+	uint8_t code;
+	switch ( c ) {
+		case 'A':
+			code = 0;
+			break;
+		case 'C':
+			code = 1;
+			break;
+		case 'G':
+			code = 2;
+			break;
+		case 'T':
+			code = 3;
+			break;
+		case 'F':
+			code = 4;
+			break;
+	}
+	return code;
+}
+
+pkentry_t string_to_pke(char* line)
+{
+	// each line is ATCG...\tBACKFWD
+	pkentry_t pke;
+	pke.ext = 0;
+	pke.next = NULL;
+	for (int i = 0; i < KMER_PACKED_LENGTH; i++)
+	{
+		pke.data.data[i] = 0;
+	}
+	for (int i = 0; i < KMER_LENGTH; i++)
+	{
+		char c = line[i];
+		uint8_t code = char_to_num(c);
+		code <<= 6-(2*(i%4));
+		pke.data.data[i%4] |= code;
+	}
+
+	pke.ext |= char_to_num(line[KMER_LENGTH+1]) << 4;
+	pke.ext |= char_to_num(line[KMER_LENGTH+2]);
+	return pke;
+}
+
 #endif
