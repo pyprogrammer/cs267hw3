@@ -10,12 +10,14 @@
 #include "kmer_hash.h"
 
 #include "util.h"
-
+#include "kmer_hash_upc.h"
 
 int main(int argc, char *argv[]){
 
   /** Declarations **/
   double inputTime=0.0, constrTime=0.0, traversalTime=0.0;
+  char *input_name;
+  int64_t nKmers, total_chars_to_read;
   
   
   /** Read input **/
@@ -24,9 +26,29 @@ int main(int argc, char *argv[]){
   ///////////////////////////////////////////
   // Your code for input file reading here //
   ///////////////////////////////////////////
+
+  input_name = argv[1];
+  nKmers = getNumKmersInUFX(input_name);
+  hash_table_t *hashtable;
+  memory_heap_t memory_heap;
+
+  hash_dir_t * hash_dir;
+  mem_dir_t * mem_dir;
+
+  hashtable = create_hash_table(nKmers, &memory_heap);
+
+  total_chars_to_read = nKmers *LINE_SIZE;
+
+
   upc_barrier;
   inputTime += gettime();
   
+
+
+
+
+
+
   /** Graph construction **/
   constrTime -= gettime();
   ///////////////////////////////////////////
@@ -35,6 +57,16 @@ int main(int argc, char *argv[]){
   upc_barrier;
   constrTime += gettime();
   
+
+
+
+
+
+
+
+
+
+
   /** Graph traversal **/
   traversalTime -= gettime();
   ////////////////////////////////////////////////////////////
@@ -43,6 +75,17 @@ int main(int argc, char *argv[]){
   ////////////////////////////////////////////////////////////
   upc_barrier;
   traversalTime += gettime();
+
+
+
+
+
+
+
+
+
+
+
   
   /** Print timing and output info **/
   /***** DO NOT CHANGE THIS PART ****/
@@ -54,4 +97,5 @@ int main(int argc, char *argv[]){
   	printf("Graph traversal time: %f seconds\n", traversalTime);
   }
   return 0;
+
 }
