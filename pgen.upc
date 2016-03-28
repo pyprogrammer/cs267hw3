@@ -10,6 +10,7 @@
 #include "kmer_hash.h"
 
 
+
 int main(int argc, char *argv[]){
 
 	/** Declarations **/

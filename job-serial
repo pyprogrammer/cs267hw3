@@ -7,5 +7,5 @@
 #SBATCH -e serial-HW3.%j.err
 
 cd ${PWD}
-srun -n 1 ./serial test
+srun -n 1 ./serial $SCRATCH/my_stripped_folder/test
 
