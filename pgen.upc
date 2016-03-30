@@ -58,14 +58,17 @@ int main(int argc, char *argv[]){
     /* working_buffer[ptr] is the start of the current k-mer                */
     /* so current left extension is at working_buffer[ptr+KMER_LENGTH+1]    */
     /* and current right extension is at working_buffer[ptr+KMER_LENGTH+2]  */
-    
-    pkentry_t pke = string_to_pke(&working_buffer[ptr]);
-    shared pkentry_t* pke_location = add_pkentry(hashtable, &memory_heap, pke);
-    append_list(entrylist, pke_location);
-    if (isStart(pke))
-    {
-    	append_list(startlist, pke_location);
-    }
+	char left_ext = (char) working_buffer[ptr+KMER_LENGTH+1];
+	char right_ext = (char) working_buffer[ptr+KMER_LENGTH+2];
+	
+	/* Add k-mer to hash table */
+	shared kmer_t* location = add_kmer_upc(hashtable, &memory_heap, &working_buffer[ptr], left_ext, right_ext);
+	
+	/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
+	if (left_ext == 'F') {
+		append_list(startlist, location);
+	}
+    append_list(entrylist, location);
     
     
 
@@ -78,7 +81,11 @@ int main(int argc, char *argv[]){
   inputTime += gettime();
   
 
-
+  while(entrylist->end != NULL)
+  {
+	  shared kmer_t* curr = pop_list(entrylist);
+	  
+  }
 
 
 

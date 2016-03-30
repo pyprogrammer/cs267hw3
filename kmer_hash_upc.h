@@ -17,7 +17,7 @@ typedef shared memory_heap_t* mem_dir_t;
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
 
-shared pkentry_t* add_pkentry(hash_table_t* hashtable, memory_heap_t* memheap, pkentry_t pke)
+shared kmer_t* add_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, const unsigned char *kmer, char left_ext, char right_ext)
 {
 	return NULL;
 }
