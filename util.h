@@ -18,6 +18,46 @@ typedef struct pkstruct {
 	// 0-3 = ACGT, 4 = F
 } pkentry_t;
 
+typedef struct entrylistel {
+	shared struct entrylistel* next;
+	shared struct entrylistel* prev;
+	shared pkentry_t* entry;
+} entrylistel_t;
+
+typedef struct {
+	shared entrylistel_t* start;
+	shared entrylistel_t* end;
+} entrylist_t;
+
+void init_list(shared entrylist_t* elist)
+{
+	elist->start = NULL;
+	elist->end = NULL;
+}
+
+void append_list(shared entrylist_t* elist, shared pkentry_t* entry)
+{
+	shared entrylistel_t* el = (shared entrylistel_t*) upc_alloc(sizeof(entrylistel_t));
+	el->prev = NULL;
+	el->next = NULL;
+	el->entry = entry;
+	if (elist->end != NULL)
+	{
+		el->prev = elist->end;
+		elist->end->next = el;
+	}
+	elist->end = el;
+	if (elist->start == NULL) elist->start = el;
+}
+
+shared pkentry_t* pop_list(shared entrylist_t* elist)
+{
+	shared entrylistel_t* last = elist->end;
+	elist->end = elist->end->prev;
+	shared pkentry_t* retval = last->entry;
+	upc_free(last);
+	return retval;
+}
 
 uint8_t baseat(pkmer_t* kmer, int index)
 {
@@ -32,7 +72,7 @@ char lookup_table[256][5] = {"AAAA", "AAAC", "AAAG", "AAAT", "AACA", "AACC", "AA
 
 void print_to_file(pkentry_t* start, FILE* fp)
 {
-	static const char s[5] = "ACGT";
+	const char s[5] = "ACGT";
 	while (1)
 	{
 		int i;
@@ -60,7 +100,7 @@ uint64_t hash(pkentry_t* pke)
 		uint64_t t = 0;
 		for (int i = 0; i < KMER_PACKED_LENGTH; i++)
 		{
-			t |= pke->data[i] << (i*8);
+			t |= pke->data.data[i] << (i*8);
 		}
 		return (t << 3) | h;
 	} else {
@@ -115,4 +155,8 @@ pkentry_t string_to_pke(char* line)
 	return pke;
 }
 
+int isStart(pkentry_t pke)
+{
+	return (pke.ext >> 4) == 4;
+}
 #endif

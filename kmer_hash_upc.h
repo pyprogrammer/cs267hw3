@@ -16,6 +16,12 @@ typedef shared memory_heap_t* mem_dir_t;
 /* Whenever something is called on a hash_table_t or memory_heap_t, instead call it on
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
+
+shared pkentry_t* add_pkentry(hash_table_t* hashtable, memory_heap_t* memheap, pkentry_t pke)
+{
+	return NULL;
+}
+
 shared hash_table_t *upc_create_hash_table(int64_t nEntries, mem_dir_t *memory_heap)
 {
   shared hash_table_t *result;
@@ -48,7 +54,7 @@ shared hash_table_t *upc_create_hash_table(int64_t nEntries, mem_dir_t *memory_h
 
   return result;
 }
-
+/*
 int main()
 {
   shared hash_table_t *tab = upc_create_hash_table(200,NULL);
@@ -59,5 +65,5 @@ int main()
   tab[0].size;
   return 0;
 }
-
+*/
 #endif

@@ -18,6 +18,11 @@ int main(int argc, char *argv[]){
   double inputTime=0.0, constrTime=0.0, traversalTime=0.0;
   char *input_name;
   int64_t nKmers, total_chars_to_read;
+  int64_t ptr = LINE_SIZE*MYTHREAD;
+  int64_t cur_chars_read = 0;
+  char* input_UFX_name = argv[1];
+  unsigned char* working_buffer;
+  FILE *inputFile;
   
   
   /** Read input **/
@@ -38,6 +43,35 @@ int main(int argc, char *argv[]){
   hashtable = create_hash_table(nKmers, &memory_heap);
 
   total_chars_to_read = nKmers *LINE_SIZE;
+  working_buffer = (unsigned char*) malloc(total_chars_to_read * sizeof(unsigned char));
+  inputFile = fopen(input_UFX_name, "r");
+  cur_chars_read = fread(working_buffer, sizeof(unsigned char),total_chars_to_read , inputFile);
+  fclose(inputFile);
+  
+  shared entrylist_t* entrylist = (shared entrylist_t*) upc_alloc(sizeof(entrylist_t));
+  init_list(entrylist);
+  
+  shared entrylist_t* startlist = (shared entrylist_t*) upc_alloc(sizeof(entrylist_t));
+  init_list(startlist);
+  
+  while (ptr < cur_chars_read) {
+    /* working_buffer[ptr] is the start of the current k-mer                */
+    /* so current left extension is at working_buffer[ptr+KMER_LENGTH+1]    */
+    /* and current right extension is at working_buffer[ptr+KMER_LENGTH+2]  */
+    
+    pkentry_t pke = string_to_pke(&working_buffer[ptr]);
+    shared pkentry_t* pke_location = add_pkentry(hashtable, &memory_heap, pke);
+    append_list(entrylist, pke_location);
+    if (isStart(pke))
+    {
+    	append_list(startlist, pke_location);
+    }
+    
+    
+
+    /* Move to the next k-mer in the input working_buffer */
+    ptr += LINE_SIZE*THREADS;
+  }
 
 
   upc_barrier;
