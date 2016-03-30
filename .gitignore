@@ -3,3 +3,5 @@ serial
 kh
 .*.swp
 
+*.err
+*.out

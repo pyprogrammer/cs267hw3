@@ -17,11 +17,6 @@ typedef shared memory_heap_t* mem_dir_t;
 /* Whenever something is called on a hash_table_t or memory_heap_t, instead call it on
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
-shared kmer_t* lookup_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, kmer_t* kmer)
-{
-	return NULL;
-}
-
 shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_t **memory_heap)
 {
   shared hash_table_t *result;
@@ -60,7 +55,6 @@ int64_t hashseq(int64_t  hashtable_size, char *seq, int size)
     for(int i = 0; i < size; i++) {
       hashval = seq[i] + (hashval << 5) + hashval;
     }
-    fprintf(stderr,"hashtable size %d\n",hashtable_size);
     return hashval % hashtable_size;
   }
 
@@ -75,27 +69,39 @@ int64_t hashkmer(int64_t  hashtable_size, char *seq)
   return hashseq(hashtable_size, seq, KMER_PACKED_LENGTH);
 }
 
-/* Looks up a kmer in the hash table and returns a pointer to that entry 
-kmer_t* lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer)
+/* Looks up a kmer in the hash table and returns a pointer to that entry */
+shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, const unsigned char *kmer)
 {
   char packedKmer[KMER_PACKED_LENGTH];
   packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
-  int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
-  bucket_t cur_bucket;
-  kmer_t *result;
+  int64_t hashval = hashkmer(hashtable->size * THREADS, (char*) packedKmer);
+  int64_t which = hashval % THREADS;
+
+  hashval = hashval / THREADS;
+
+  hashtable += which;
+
+  shared kmer_t *result;
   
-  cur_bucket = hashtable->table[hashval];
-  result = cur_bucket.head;
+  result = hashtable->table[hashval].head;
+  unsigned char cmp[KMER_PACKED_LENGTH+1];
+  cmp[KMER_PACKED_LENGTH] = (unsigned char) 0;
   
-  for (; result!=NULL; ) {
-     if ( memcmp(packedKmer, result->kmer, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
-        return result;
-     }
-     result = result->next;
+  while(result!=NULL) {
+    upc_memget(&cmp,result->kmer,KMER_PACKED_LENGTH);
+    fprintf(stderr,"cmp %s\n",cmp);
+    if( memcmp(packedKmer, cmp, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
+      return result;
+    }
+    result = result->next;
   }
   return NULL;
 }
-*/
+
+kmer_t* lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer)
+{
+  return NULL;
+}
 
 /* Adds a kmer and its extensions in the hash table (note that a memory heap should be preallocated. ) */
 shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps,
@@ -106,48 +112,29 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
   shared memory_heap_t *memory_heap;
   char packedKmer[KMER_PACKED_LENGTH];
 
-  fprintf(stderr,"PREPACK\n");
   packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
-  fprintf(stderr,"POSTPACK %c\n",packedKmer[4]);
-  fprintf(stderr,"KMER_PACKED_LENGTH %d\n",KMER_PACKED_LENGTH);
 
-  fprintf(stderr,"hashtable->size %d THREADS %d\n",hashtable->size,THREADS);
   int64_t hashval = hashkmer(tables->size * THREADS, (char*) packedKmer);
-  fprintf(stderr,"POSTHASH\n");
 
   int64_t which = hashval % THREADS;
   hashval = hashval/THREADS;
   hashtable = tables + which;
   memory_heap = heaps + which;
 
-  fprintf(stderr,"MYTHREAD %d: Init\n",MYTHREAD);
   int64_t pos = memory_heap->posInHeap;
 
   shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
-
-  fprintf(stderr,"MYTHREAD %d: Find next empty\n",MYTHREAD);
   
   /* Add the contents to the appropriate kmer struct in the heap */
   upc_memput(next_empty_kmer->kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
-  fprintf(stderr,"MYTHREAD %d: memput\n",MYTHREAD);
-
-  /*
-  for(int i=0;i<KMER_PACKED_LENGTH;i++)
-  {
-    ((char*)(memory_heap->heap[pos]))[i] = packedKmer[i];
-  }
-  */
-
 
   next_empty_kmer->l_ext = left_ext;
   next_empty_kmer->r_ext = right_ext;
-  fprintf(stderr,"MYTHREAD %d: exts\n",MYTHREAD);
   
   /* Fix the next pointer to point to the appropriate kmer struct */
   next_empty_kmer->next = hashtable->table[hashval].head;
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
-  fprintf(stderr,"MYTHREAD %d: fix\n",MYTHREAD);
   
   /* Increase the heap pointer */
   memory_heap->posInHeap++;
@@ -195,12 +182,16 @@ int main()
     sleep(1);
   }
 
-  fprintf(stderr,"hashtable size %d\n",tab->size);
-
+  shared kmer_t* added;
   if(MYTHREAD==0)
   {
-    shared kmer_t* added = add_kmer(tab, mem, sample, *left, *right);
+    added = add_kmer(tab, mem, sample, *left, *right);
   }
+
+  upc_barrier;
+
+  shared kmer_t* srced = lookup_kmer_upc(tab, mem, sample);
+  fprintf(stderr,"I am %d: 0x%lx 0x%lx\n",MYTHREAD,(long int)added,(long int)srced);
 
   return 0;
 }
