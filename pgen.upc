@@ -23,6 +23,12 @@ int main(int argc, char *argv[]){
   char* input_UFX_name = argv[1];
   unsigned char* working_buffer;
   FILE *inputFile;
+  char cur_contig[MAXIMUM_CONTIG_SIZE];
+  char unpackedKmer[KMER_LENGTH+1];
+  unpackedKmer[KMER_LENGTH] = '\0';
+  shared kmer_t* cur_kmer_ptr;
+  int64_t posInContig;
+  int64_t contigID = 0;
   init_LookupTable();
   
   
@@ -49,10 +55,10 @@ int main(int argc, char *argv[]){
   cur_chars_read = fread(working_buffer, sizeof(unsigned char),total_chars_to_read , inputFile);
   fclose(inputFile);
   
-  shared entrylist_t* entrylist = (shared entrylist_t*) upc_alloc(sizeof(entrylist_t));
+  entrylist_t* entrylist = (entrylist_t*) malloc(sizeof(entrylist_t));
   init_list(entrylist);
   
-  shared entrylist_t* startlist = (shared entrylist_t*) upc_alloc(sizeof(entrylist_t));
+  entrylist_t* startlist = (entrylist_t*) malloc(sizeof(entrylist_t));
   init_list(startlist);
   
   while (ptr < cur_chars_read) {
@@ -81,17 +87,7 @@ int main(int argc, char *argv[]){
   upc_barrier;
   inputTime += gettime();
   
-  shared kmer_t* curr;
-  char left_ext;
-  char right_ext;
-  kmer_t newkmer;
-  while(entrylist->end != NULL)
-  {
-	  pop_list(entrylist, &curr, &left_ext, &right_ext);
-	  shift_into_kmer(curr, &newkmer, right_ext);
-	  shared kmer_t* next = find_kmer_upc(hashtable, &memory_heap, &newkmer);
-	  curr->next = next;
-  }
+
 
 
 
@@ -101,6 +97,19 @@ int main(int argc, char *argv[]){
   ///////////////////////////////////////////
   // Your code for graph construction here //
   ///////////////////////////////////////////
+  
+  shared kmer_t* curr;
+  char left_ext;
+  char right_ext;
+  kmer_t newkmer;
+  while(entrylist->end != NULL)
+  {
+	  pop_list(entrylist, &curr, &left_ext, &right_ext);
+	  if (right_ext == 'F') continue; // we done here
+	  shift_into_kmer(curr, &newkmer, right_ext);
+	  shared kmer_t* next = lookup_kmer_upc(hashtable, &memory_heap, &newkmer);
+	  curr->next = next;
+  }
   upc_barrier;
   constrTime += gettime();
   
@@ -120,10 +129,37 @@ int main(int argc, char *argv[]){
   // Your code for graph traversal and output printing here //
   // Save your output to "pgen.out"                         //
   ////////////////////////////////////////////////////////////
+  
+  
   upc_barrier;
   traversalTime += gettime();
+  char outputFilename[32];
+  sprintf(outputFilename, "pgen.%d.out", MYTHREAD);
+  FILE* output = fopen(outputFilename, "w");
+  while(startlist->end != NULL)
+  {
+	  pop_list(startlist, &cur_kmer_ptr, &left_ext, &right_ext);
+	  unpackSequence((unsigned char*) cur_kmer_ptr->kmer,  (unsigned char*) unpackedKmer, KMER_LENGTH);
+	  /* Initialize current contig with the seed content */
+	  memcpy(cur_contig ,unpackedKmer, KMER_LENGTH * sizeof(char));
+	  posInContig = KMER_LENGTH;
+	  right_ext = cur_kmer_ptr->r_ext;
 
+	  /* Keep adding bases while not finding a terminal node */
+	  while (right_ext != 'F') {
+		cur_contig[posInContig] = right_ext;
+		posInContig++;
+		cur_kmer_ptr = cur_kmer_ptr->next;
+		right_ext = cur_kmer_ptr->r_ext;
+	  }
 
+	  /* Print the contig since we have found the corresponding terminal node */
+	  cur_contig[posInContig] = '\0';
+	  fprintf(output,"%s\n", cur_contig);
+	  contigID++;
+	  //totBases += strlen(cur_contig);
+  }
+  fclose(output);
 
 
 

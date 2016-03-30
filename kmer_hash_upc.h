@@ -22,7 +22,7 @@ shared kmer_t* add_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap,
 	return NULL;
 }
 
-shared kmer_t* find_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, kmer_t* kmer) // packed
+shared kmer_t* lookup_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, kmer_t* kmer)
 {
 	return NULL;
 }

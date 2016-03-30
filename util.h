@@ -7,27 +7,57 @@
 #define HASH_DEPTH 2 // 2 chars deep for the hash.
 
 typedef struct entrylistel {
-	shared struct entrylistel* next;
-	shared struct entrylistel* prev;
+	struct entrylistel* next;
+	struct entrylistel* prev;
 	shared kmer_t* entry;
 	char left_ext;
 	char right_ext;
 } entrylistel_t;
 
 typedef struct {
-	shared entrylistel_t* start;
-	shared entrylistel_t* end;
+	entrylistel_t* start;
+	entrylistel_t* end;
 } entrylist_t;
 
-void init_list(shared entrylist_t* elist)
+typedef struct {
+	char* buf;
+	int size;
+	int bufsize;
+} stringbuffer_t;
+
+void init_stringbuffer(stringbuffer_t* sb, int size)
+{
+	sb->bufsize = size+1;
+	sb->size = 0;
+	sb->buf = (char*) malloc(sizeof(char) * sb->bufsize);
+	memset(sb->buf, 0, sizeof(char) * sb->bufsize);
+}
+
+void expand_buffer(stringbuffer_t* sb)
+{
+	sb->buf = realloc(sb->buf, sb->bufsize*2-1);
+	sb->bufsize = sb->bufsize*2-1;
+}
+
+void insert_buffer(stringbuffer_t* sb, char c)
+{
+	if (sb->size == sb->bufsize-1)
+	{
+		expand_buffer(sb);
+	}
+	sb->buf[sb->size++] = c;
+	sb->buf[sb->size] = '\0';
+}
+
+void init_list(entrylist_t* elist)
 {
 	elist->start = NULL;
 	elist->end = NULL;
 }
 
-void append_list(shared entrylist_t* elist, shared kmer_t* entry, char left_ext, char right_ext)
+void append_list(entrylist_t* elist, shared kmer_t* entry, char left_ext, char right_ext)
 {
-	shared entrylistel_t* el = (shared entrylistel_t*) upc_alloc(sizeof(entrylistel_t));
+	entrylistel_t* el = (entrylistel_t*) malloc(sizeof(entrylistel_t));
 	el->prev = NULL;
 	el->next = NULL;
 	el->entry = entry;
@@ -42,20 +72,22 @@ void append_list(shared entrylist_t* elist, shared kmer_t* entry, char left_ext,
 	if (elist->start == NULL) elist->start = el;
 }
 
-void pop_list(shared entrylist_t* elist, kmer_t** ret, char* left_ext, char* right_ext)
+void pop_list(entrylist_t* elist, shared kmer_t** ret, char* left_ext, char* right_ext)
 {
-	shared entrylistel_t* last = elist->end;
+	entrylistel_t* last = elist->end;
 	elist->end = elist->end->prev;
 	*ret = last->entry;
 	*left_ext = last->left_ext;
 	*right_ext = last->right_ext;
-	upc_free(last);
+	free(last);
 }
 
 void shift_into_kmer(shared kmer_t* current, kmer_t* dest, char append)
 {
 	unsigned char buf[KMER_LENGTH+1];
-	unpackSequence(current->kmer, buf, KMER_LENGTH);
+	unsigned char cpy[KMER_LENGTH];
+	upc_memget(cpy, current->kmer, KMER_LENGTH);
+	unpackSequence(cpy, buf, KMER_LENGTH);
 	buf[KMER_LENGTH] = append;
 	packSequence(buf+1, dest->kmer, KMER_LENGTH);
 }
