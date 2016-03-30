@@ -23,6 +23,7 @@ int main(int argc, char *argv[]){
   char* input_UFX_name = argv[1];
   unsigned char* working_buffer;
   FILE *inputFile;
+  init_LookupTable();
   
   
   /** Read input **/
@@ -62,13 +63,13 @@ int main(int argc, char *argv[]){
 	char right_ext = (char) working_buffer[ptr+KMER_LENGTH+2];
 	
 	/* Add k-mer to hash table */
-	shared kmer_t* location = add_kmer_upc(hashtable, &memory_heap, &working_buffer[ptr], left_ext, right_ext);
+	shared kmer_t* location = add_kmer_upc(hashtable, &memory_heap, &working_buffer[ptr], left_ext, right_ext); // puts in unpacked
 	
 	/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
 	if (left_ext == 'F') {
-		append_list(startlist, location);
+		append_list(startlist, location, left_ext, right_ext);
 	}
-    append_list(entrylist, location);
+    append_list(entrylist, location, left_ext, right_ext);
     
     
 
@@ -80,11 +81,16 @@ int main(int argc, char *argv[]){
   upc_barrier;
   inputTime += gettime();
   
-
+  shared kmer_t* curr;
+  char left_ext;
+  char right_ext;
+  kmer_t newkmer;
   while(entrylist->end != NULL)
   {
-	  shared kmer_t* curr = pop_list(entrylist);
-	  
+	  pop_list(entrylist, &curr, &left_ext, &right_ext);
+	  shift_into_kmer(curr, &newkmer, right_ext);
+	  shared kmer_t* next = find_kmer_upc(hashtable, &memory_heap, &newkmer);
+	  curr->next = next;
   }
 
 

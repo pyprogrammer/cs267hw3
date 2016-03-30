@@ -17,10 +17,16 @@ typedef shared memory_heap_t* mem_dir_t;
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
 
-shared kmer_t* add_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, const unsigned char *kmer, char left_ext, char right_ext)
+shared kmer_t* add_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, const unsigned char *kmer, char left_ext, char right_ext) //unpacked
 {
 	return NULL;
 }
+
+shared kmer_t* find_kmer_upc(hash_table_t *hashtable, memory_heap_t *memory_heap, kmer_t* kmer) // packed
+{
+	return NULL;
+}
+
 
 shared hash_table_t *upc_create_hash_table(int64_t nEntries, mem_dir_t *memory_heap)
 {

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <packingDNAseq.h>
 
 #ifndef UTILH
 #define UTILH
@@ -9,6 +10,8 @@ typedef struct entrylistel {
 	shared struct entrylistel* next;
 	shared struct entrylistel* prev;
 	shared kmer_t* entry;
+	char left_ext;
+	char right_ext;
 } entrylistel_t;
 
 typedef struct {
@@ -22,12 +25,14 @@ void init_list(shared entrylist_t* elist)
 	elist->end = NULL;
 }
 
-void append_list(shared entrylist_t* elist, shared kmer_t* entry)
+void append_list(shared entrylist_t* elist, shared kmer_t* entry, char left_ext, char right_ext)
 {
 	shared entrylistel_t* el = (shared entrylistel_t*) upc_alloc(sizeof(entrylistel_t));
 	el->prev = NULL;
 	el->next = NULL;
 	el->entry = entry;
+	el->left_ext = left_ext;
+	el->right_ext = right_ext;
 	if (elist->end != NULL)
 	{
 		el->prev = elist->end;
@@ -37,12 +42,21 @@ void append_list(shared entrylist_t* elist, shared kmer_t* entry)
 	if (elist->start == NULL) elist->start = el;
 }
 
-shared kmer_t* pop_list(shared entrylist_t* elist)
+void pop_list(shared entrylist_t* elist, kmer_t** ret, char* left_ext, char* right_ext)
 {
 	shared entrylistel_t* last = elist->end;
 	elist->end = elist->end->prev;
-	shared kmer_t* retval = last->entry;
+	*ret = last->entry;
+	*left_ext = last->left_ext;
+	*right_ext = last->right_ext;
 	upc_free(last);
-	return retval;
+}
+
+void shift_into_kmer(shared kmer_t* current, kmer_t* dest, char append)
+{
+	unsigned char buf[KMER_LENGTH+1];
+	unpackSequence(current->kmer, buf, KMER_LENGTH);
+	buf[KMER_LENGTH] = append;
+	packSequence(buf+1, dest->kmer, KMER_LENGTH);
 }
 #endif
