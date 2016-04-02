@@ -5,3 +5,5 @@ kh
 
 *.err
 *.out
+
+check_mem.sh

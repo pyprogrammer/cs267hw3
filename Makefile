@@ -18,12 +18,16 @@ all: 	$(TARGETS)
 serial: serial.c $(HEADERS)
 		$(CC) $(CFLAGS) -o $@ $< -DKMER_LENGTH=$(KMER_LENGTH) -DKMER_PACKED_LENGTH=$(KMER_PACKED_LENGTH) $(LIBS)
 
-pgen:	pgen.upc $(HEADERS) $(UPCHEADERS)
+pgen:	pgen.upc $(UPCHEADERS)
 		$(UPCC) $(UPCFLAGS) -Wc,"$(CFLAGS)" -o $@ $< $(DEFINE) $(LIBS)
 
-kh: 	kmer_hash_upc.upc $(HEADERS)
+kh: 	kmer_hash_upc.upc $(UPCHEADERS)
 		$(UPCC) $(UPCFLAGS) -Wc,"$(CFLAGS)" -o $@ $< $(DEFINE) $(LIBS)
+
+kh-test:
+	make clean && make kh && sbatch job-kh
 
 clean :
 	rm -f *.o
 	rm -rf $(TARGETS)
+	rm -rf *.err *.out
