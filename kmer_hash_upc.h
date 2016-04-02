@@ -41,6 +41,7 @@ shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_
   memory_heap[0][MYTHREAD].posInHeap = 0;
   memory_heap[0][MYTHREAD].write_lock = upc_global_lock_alloc();
 
+  /*
   fprintf(stderr,"size of memory_heap[0][i] %d size of ptr %d\n",sizeof(memory_heap[0][MYTHREAD]),sizeof(void*));
   fprintf(stderr,"total heap size %d\n",THREADS * heap_size * sizeof(kmer_t));
   for(int i=0;i<THREADS;i++)
@@ -48,6 +49,7 @@ shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_
     fprintf(stderr,"heap for thread %d at 0x%ld\n",i,memory_heap[0][i].heap);
     fprintf(stderr,"DIFF thread %d at 0x%ld\n",i,(shared char*)memory_heap[0][i].heap - (shared char*)memory_heap[0][0].heap);
   }
+  */
 
   return result;
 }
@@ -101,8 +103,10 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
       return result;
     }
     result = result->next;
+    /*
     for(int i=0;i<20;i++)
       fprintf(stderr,"next one %d: result? 0x%lx kmer? 0x%lx\n",i,(shared void*)result,(shared void*)result->kmer);
+      */
   }
   return NULL;
 }
@@ -154,11 +158,13 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
 
+  /*
   char buf[KMER_LENGTH+1];
   memcpy(buf,kmer,KMER_LENGTH);
   buf[KMER_LENGTH] = '\0';
   fprintf(stderr,"THREAD %d adding to table (which) %d at posInHeap %d: loc 0x%lx %s THREAD %d which %d pos %2d\n",
       MYTHREAD,which,memory_heap->posInHeap,(long int) next_empty_kmer,buf,MYTHREAD,which,pos);
+      */
   
   /* Increase the heap pointer */
   memory_heap->posInHeap++;
