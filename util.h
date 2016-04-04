@@ -84,13 +84,12 @@ void pop_list(entrylist_t* elist, shared kmer_t** ret, char* left_ext, char* rig
 	free(last);
 }
 
-void shift_into_kmer(shared kmer_t* current, kmer_t* dest, char append)
+void shift_into_kmer(shared kmer_t* current, char* dest, char append)
 {
-	unsigned char buf[KMER_LENGTH+1];
 	unsigned char cpy[KMER_LENGTH];
 	upc_memget(cpy, current->kmer, KMER_LENGTH);
-	unpackSequence(cpy, buf, KMER_LENGTH);
-	buf[KMER_LENGTH] = append;
-	packSequence(buf+1, dest->kmer, KMER_LENGTH);
+	unpackSequence(cpy, dest, KMER_LENGTH);
+	dest[KMER_LENGTH] = append;
+//	packSequence(buf+1, dest->kmer, KMER_LENGTH);
 }
 #endif

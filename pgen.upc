@@ -100,13 +100,13 @@ int main(int argc, char *argv[]){
   shared kmer_t* curr;
   char left_ext;
   char right_ext;
-  kmer_t newkmer;
+  char newkmer[KMER_LENGTH+1];
   while(entrylist->end != NULL)
   {
 	  pop_list(entrylist, &curr, &left_ext, &right_ext);
 	  if (right_ext == 'F') continue; // we done here
-	  shift_into_kmer(curr, &newkmer, right_ext);
-	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, (const unsigned char*) &newkmer);
+	  shift_into_kmer(curr, newkmer, right_ext);
+	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
 	  curr->next = next;
   }
   upc_barrier;
