@@ -28,7 +28,10 @@ shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap
   int64_t my_size = (n_buckets + THREADS - 1)/THREADS;
   int64_t heap_size = ((nEntries * LOAD_FACTOR + THREADS - 1)/THREADS);
 
+  /*
   fprintf(stderr,"nEntries %ld my_size %ld heap_size %ld\n",nEntries,my_size,heap_size);
+  */
+
   if(n_buckets < 0 || my_size < 0 || heap_size <0)
   {
     fprintf(stderr,"sizes are zero! check yourself before you wreck yourself.\n");
@@ -40,6 +43,7 @@ shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap
   (result+MYTHREAD)->size = my_size;
   (result+MYTHREAD)->table = (shared bucket_t*) &global_tables[MYTHREAD*my_size];
   (result+MYTHREAD)->write_lock = upc_global_lock_alloc();
+
 
   *memory_heap = (shared memory_heap_t*) upc_all_alloc(THREADS,sizeof(memory_heap_t));
   heaps = (shared bucket_t *) upc_all_alloc( THREADS, heap_size * sizeof(kmer_t) );
@@ -90,18 +94,21 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
 {
   char packedKmer[KMER_PACKED_LENGTH];
   packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
+
   int64_t hashval = hashkmer(hashtable->size * THREADS, (char*) packedKmer);
   int64_t which = hashval % THREADS;
 
   hashval = hashval / THREADS;
-
   hashtable += which;
 
   shared kmer_t *result;
-  
   result = hashtable->table[hashval].head;
   unsigned char cmp[KMER_PACKED_LENGTH+1];
   cmp[KMER_PACKED_LENGTH] = (unsigned char) 0;
+
+  char buf[KMER_LENGTH+1];
+  memcpy(buf,kmer,KMER_LENGTH);
+  buf[KMER_LENGTH] = '\0';
   
   while(result!=NULL) {
     upc_memget(&cmp,result->kmer,KMER_PACKED_LENGTH);
@@ -110,10 +117,11 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
       return result;
     }
     result = result->next;
-    /*
     for(int i=0;i<20;i++)
-      fprintf(stderr,"next one %d: result? 0x%lx kmer? 0x%lx\n",i,(shared void*)result,(shared void*)result->kmer);
-      */
+    {
+      fprintf(stderr,"next one %d: result? 0x%lx kmer? 0x%lx kmer %s\n",i,(shared void*)result,(shared void*)result->kmer,
+          buf);
+    }
   }
   return NULL;
 }

@@ -106,6 +106,7 @@ int main(int argc, char *argv[]){
 	  pop_list(entrylist, &curr, &left_ext, &right_ext);
 	  if (right_ext == 'F') continue; // we done here
 	  shift_into_kmer(curr, newkmer, right_ext);
+      fprintf(stderr,"looking at %s\n",newkmer);
 	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
 	  curr->next = next;
   }
