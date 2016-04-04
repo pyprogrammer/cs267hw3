@@ -18,7 +18,7 @@ typedef shared memory_heap_t* mem_dir_t;
 /* Whenever something is called on a hash_table_t or memory_heap_t, instead call it on
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
-shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_t **memory_heap)
+shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap_t **memory_heap)
 {
   shared hash_table_t *result;
   shared bucket_t *global_tables; 
@@ -27,6 +27,13 @@ shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_
   int64_t n_buckets = nEntries * LOAD_FACTOR;
   int64_t my_size = (n_buckets + THREADS - 1)/THREADS;
   int64_t heap_size = ((nEntries * LOAD_FACTOR + THREADS - 1)/THREADS);
+
+  fprintf(stderr,"nEntries %ld my_size %ld heap_size %ld\n",nEntries,my_size,heap_size);
+  if(n_buckets < 0 || my_size < 0 || heap_size <0)
+  {
+    fprintf(stderr,"sizes are zero! check yourself before you wreck yourself.\n");
+    exit(1);
+  }
 
   result = upc_all_alloc(THREADS,sizeof(hash_table_t));
   global_tables = (shared bucket_t*) upc_all_alloc( THREADS, my_size * sizeof(bucket_t) );

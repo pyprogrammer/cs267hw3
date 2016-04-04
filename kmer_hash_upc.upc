@@ -14,7 +14,7 @@ const unsigned char *right = "F";
 int main()
 {
   shared memory_heap_t *mem;
-  shared hash_table_t *tab = upc_create_hash_table(3,&mem);
+  shared hash_table_t *tab = upc_create_hash_table(4514197,&mem);
   
   if(MYTHREAD==0)
     fprintf(stderr,"tab[%d].size: %d\ntab[%d].size: %d\ntab[%d].size: %d\n",0,tab[0].size,1,tab[1].size,2,tab[2].size);
@@ -47,10 +47,10 @@ int main()
   upc_barrier;
   sleep(1);
 
-  for(int i=0; i < 30 ; i++)
+  for(int i=0; i < 4514197 ; i++)
   {
-    added = add_kmer(tab, mem, s + i, *left, *right);
-    memcpy(buf,s + i,KMER_LENGTH);
+    added = add_kmer(tab, mem, s + (i%200), *left, *right);
+    memcpy(buf,s + (i%200),KMER_LENGTH);
     fprintf(stderr,"(%d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
   }
 

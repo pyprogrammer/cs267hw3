@@ -11,6 +11,7 @@
 #include "kmer_hash.h"
 */
 
+#include "util.h"
 #include "kmer_hash_upc.h"
 
 int main(int argc, char *argv[]){
@@ -67,7 +68,7 @@ int main(int argc, char *argv[]){
 	char right_ext = (char) working_buffer[ptr+KMER_LENGTH+2];
 	
 	/* Add k-mer to hash table */
-	shared kmer_t* location = add_kmer_upc(hashtable, &memory_heap, &working_buffer[ptr], left_ext, right_ext); // puts in unpacked
+	shared kmer_t* location = add_kmer(hashtable, memory_heap, working_buffer + ptr, left_ext, right_ext); // puts in unpacked
 	
 	/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
 	if (left_ext == 'F') {
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]){
 	  pop_list(entrylist, &curr, &left_ext, &right_ext);
 	  if (right_ext == 'F') continue; // we done here
 	  shift_into_kmer(curr, &newkmer, right_ext);
-	  shared kmer_t* next = lookup_kmer_upc(hashtable, &memory_heap, &newkmer);
+	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, (const unsigned char*) &newkmer);
 	  curr->next = next;
   }
   upc_barrier;

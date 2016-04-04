@@ -1,8 +1,10 @@
+#ifndef UTILH
+#define UTILH
+
 #include <stdint.h>
 #include <packingDNAseq.h>
 
-#ifndef UTILH
-#define UTILH
+#include "kmer_hash_upc.h"
 
 #define HASH_DEPTH 2 // 2 chars deep for the hash.
 
