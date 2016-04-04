@@ -78,7 +78,7 @@ int64_t hashseq(int64_t  hashtable_size, char *seq, int size)
     for(int i = 0; i < size; i++) {
       hashval = seq[i] + (hashval << 5) + hashval;
     }
-    fprintf(stdout,"bucket value %d\n",hashval % hashtable_size);
+    fprintf(stdout,"%7d bucket value \n",hashval % hashtable_size);
     return hashval % hashtable_size;
   }
 
