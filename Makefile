@@ -11,7 +11,7 @@ HEADERS	= contig_generation.h kmer_hash.h packingDNAseq.h
 UPCHEADERS	= contig_upc.h kmer_hash_upc.h packingDNAseq.h
 LIBS	=
 
-TARGETS	= serial pgen
+TARGETS	= serial pgen kh
 
 all: 	$(TARGETS)
 

@@ -42,13 +42,10 @@ int main(int argc, char *argv[]){
 
   input_name = argv[1];
   nKmers = getNumKmersInUFX(input_name);
-  hash_table_t *hashtable;
-  memory_heap_t memory_heap;
+  shared hash_table_t *hashtable;
+  shared memory_heap_t *memory_heap;
 
-  hash_dir_t * hash_dir;
-  mem_dir_t * mem_dir;
-
-  hashtable = create_hash_table(nKmers, &memory_heap);
+  hashtable = upc_create_hash_table(nKmers, &memory_heap);
 
   total_chars_to_read = nKmers *LINE_SIZE;
   working_buffer = (unsigned char*) malloc(total_chars_to_read * sizeof(unsigned char));
