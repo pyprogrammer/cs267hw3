@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
 
   hashtable = upc_create_hash_table(nKmers, &memory_heap);
 
-  total_chars_to_read = nKmers *LINE_SIZE;
+  total_chars_to_read = nKmers * LINE_SIZE;
   working_buffer = (unsigned char*) malloc(total_chars_to_read * sizeof(unsigned char));
   inputFile = fopen(input_UFX_name, "r");
   cur_chars_read = fread(working_buffer, sizeof(unsigned char),total_chars_to_read , inputFile);
@@ -59,6 +59,9 @@ int main(int argc, char *argv[]){
   
   entrylist_t* startlist = (entrylist_t*) malloc(sizeof(entrylist_t));
   init_list(startlist);
+
+  char buf[KMER_LENGTH + 1];
+  buf[KMER_LENGTH] = '\0';
   
   while (ptr < cur_chars_read) {
     /* working_buffer[ptr] is the start of the current k-mer                */
@@ -67,7 +70,9 @@ int main(int argc, char *argv[]){
 	char left_ext = (char) working_buffer[ptr+KMER_LENGTH+1];
 	char right_ext = (char) working_buffer[ptr+KMER_LENGTH+2];
 	
+    memcpy(buf,working_buffer + ptr,KMER_LENGTH);
 	/* Add k-mer to hash table */
+    // fprintf(stderr,"what we doing here today? %s\n",buf);
 	shared kmer_t* location = add_kmer(hashtable, memory_heap, working_buffer + ptr, left_ext, right_ext); // puts in unpacked
 	
 	/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
@@ -100,14 +105,30 @@ int main(int argc, char *argv[]){
   shared kmer_t* curr;
   char left_ext;
   char right_ext;
-  char newkmer[KMER_LENGTH+1];
+  char newkmer[KMER_LENGTH+2];
+  newkmer[KMER_LENGTH+1] = '\0';
   while(entrylist->end != NULL)
   {
 	  pop_list(entrylist, &curr, &left_ext, &right_ext);
 	  if (right_ext == 'F') continue; // we done here
 	  shift_into_kmer(curr, newkmer, right_ext);
-      fprintf(stderr,"looking at %s\n",newkmer);
-	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
+      shared kmer_t* next;
+      fprintf(stderr,"thread %d looking at %s\n",MYTHREAD,newkmer+1);
+      if(MYTHREAD==0)
+      {
+	    next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
+      }
+      upc_barrier;
+      if(MYTHREAD==1)
+      {
+	    next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
+      }
+      upc_barrier;
+      if(MYTHREAD==2)
+      {
+	    next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
+      }
+      upc_barrier;
 	  curr->next = next;
   }
   upc_barrier;

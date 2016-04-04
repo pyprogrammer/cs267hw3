@@ -21,7 +21,7 @@
 #endif
 
 #ifndef LOAD_FACTOR
-#define LOAD_FACTOR 3
+#define LOAD_FACTOR 15
 #endif
 
 #ifndef LINE_SIZE
@@ -43,7 +43,7 @@ struct kmer_t{
    char kmer[KMER_PACKED_LENGTH];
    char l_ext;
    char r_ext;
-   shared kmer_t *next;
+   shared void *next;
 };
 
 /* Start k-mer data structure */

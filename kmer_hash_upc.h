@@ -28,9 +28,7 @@ shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap
   int64_t my_size = (n_buckets + THREADS - 1)/THREADS;
   int64_t heap_size = ((nEntries * LOAD_FACTOR + THREADS - 1)/THREADS);
 
-  /*
   fprintf(stderr,"nEntries %ld my_size %ld heap_size %ld\n",nEntries,my_size,heap_size);
-  */
 
   if(n_buckets < 0 || my_size < 0 || heap_size <0)
   {
@@ -40,9 +38,14 @@ shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap
 
   result = upc_all_alloc(THREADS,sizeof(hash_table_t));
   global_tables = (shared bucket_t*) upc_all_alloc( THREADS, my_size * sizeof(bucket_t) );
+  // upc_memset(global_tables+MYTHREAD*my_size,0,my_size*sizeof(bucket_t));
   (result+MYTHREAD)->size = my_size;
   (result+MYTHREAD)->table = (shared bucket_t*) &global_tables[MYTHREAD*my_size];
   (result+MYTHREAD)->write_lock = upc_global_lock_alloc();
+  for(int i=0;i<my_size;i++)
+  {
+    (result+MYTHREAD)->table[i].head = NULL;
+  }
 
 
   *memory_heap = (shared memory_heap_t*) upc_all_alloc(THREADS,sizeof(memory_heap_t));
@@ -92,36 +95,91 @@ int64_t hashkmer(int64_t  hashtable_size, char *seq)
 /* Looks up a kmer in the hash table and returns a pointer to that entry */
 shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, const unsigned char *kmer)
 {
+  char buf[KMER_LENGTH+1];
+  buf[KMER_LENGTH] = '\0';
+  memcpy(buf,kmer,KMER_LENGTH);
+
+  fprintf(stderr,"THREAD %d are we here or what? %s\n",MYTHREAD,buf);
   char packedKmer[KMER_PACKED_LENGTH];
   packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
 
+  memcpy(buf,kmer,KMER_LENGTH);
+  fprintf(stderr,"THREAD %d packing? %s\n",MYTHREAD,buf);
+
   int64_t hashval = hashkmer(hashtable->size * THREADS, (char*) packedKmer);
   int64_t which = hashval % THREADS;
+
 
   hashval = hashval / THREADS;
   hashtable += which;
 
   shared kmer_t *result;
+  kmer_t res;
+
+  fprintf(stderr,"THREAD %d hash? %d %d %s\n",MYTHREAD,hashval,which,buf);
   result = hashtable->table[hashval].head;
+  fprintf(stderr,"THREAD %d we are here now\n",MYTHREAD);
   unsigned char cmp[KMER_PACKED_LENGTH+1];
   cmp[KMER_PACKED_LENGTH] = (unsigned char) 0;
 
-  char buf[KMER_LENGTH+1];
-  memcpy(buf,kmer,KMER_LENGTH);
-  buf[KMER_LENGTH] = '\0';
+  if(result==NULL)
+    fprintf(stderr,"THREAD %d wtf why is result null\n",MYTHREAD);
+  else
+  {
+    fprintf(stderr,"THREAD %d result is 0x%ld\n",MYTHREAD,result);
+  }
   
+  int isnull;
   while(result!=NULL) {
+    fprintf(stderr,"THREAD %d while loop is starting\n",MYTHREAD);
+    /*
     upc_memget(&cmp,result->kmer,KMER_PACKED_LENGTH);
-    // fprintf(stderr,"packedKmer %s || cmp %s\n",packedKmer,cmp);
-    if( memcmp(packedKmer, cmp, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
+    */
+    upc_memget(&res,result,sizeof(kmer_t));
+    memcpy(&cmp,res.kmer,KMER_PACKED_LENGTH);
+    fprintf(stderr,"THREAD %d memcpy done\n",MYTHREAD);
+    fprintf(stderr,"THREAD %d packedKmer %s || cmp %s || str %s\n",MYTHREAD,packedKmer,cmp,buf);
+    isnull = 0;
+    if(res.next==NULL)
+    {
+      isnull = 1;
+      fprintf(stderr,"THREAD %d result is null apparently!\n",MYTHREAD);
+    }
+    // fprintf(stderr,"THREAD %d result %lx result->next %lx next is null? %d isnull %d\n",MYTHREAD,
+    //     result,result->next,result->next == NULL);
+    fprintf(stderr,"THREAD %d result->next is null? %d\n",MYTHREAD,result->next==NULL);
+    fprintf(stderr,"THREAD %d isnull? %d\n",MYTHREAD,isnull);
+    if( memcmp(packedKmer, cmp, KMER_PACKED_LENGTH) == 0 ) {
+      memcpy(buf,kmer,KMER_LENGTH);
+      fprintf(stderr,"THREAD %d ok! we return result now! %s %s\n",MYTHREAD,cmp,buf);
       return result;
     }
-    result = result->next;
-    for(int i=0;i<20;i++)
+    else
     {
-      fprintf(stderr,"next one %d: result? 0x%lx kmer? 0x%lx kmer %s\n",i,(shared void*)result,(shared void*)result->kmer,
-          buf);
+      fprintf(stderr,"THREAD %d whoops! that's not it! %c%c%c%c%c %c%c%c%c%c %d %d %d %d %d\n",MYTHREAD,
+          packedKmer[0],packedKmer[1],packedKmer[2],packedKmer[3],packedKmer[4],
+          cmp[0],cmp[1],cmp[2],cmp[3],cmp[4],
+          packedKmer[0] == cmp[0],packedKmer[1] == cmp[1],packedKmer[2] == cmp[2],packedKmer[3] == cmp[3],packedKmer[4] == cmp[4]);
+      fprintf(stderr,"THREAD %d whoops! that's not it! where %s {{{{%d}}}} %s 0x%ld\n",
+          MYTHREAD,cmp,memcmp(packedKmer, cmp, KMER_PACKED_LENGTH),packedKmer,res.next);
+      fprintf(stderr,"THREAD %d whoops! that's not it! 0x%ld\n",MYTHREAD,res.next);
     }
+
+    if((isnull && !(result->next == NULL)) || (!isnull && result->next==NULL))
+    {
+      fprintf(stderr,"THREAD %d wtf isnull and result->next == NULL doesn't match LOL\n",MYTHREAD);
+    }
+
+    if(isnull)
+    {
+      fprintf(stderr,"THREAD %d next is NULL! (wtf?) kmer %s\n",MYTHREAD,cmp);
+      break;
+    }
+
+    fprintf(stderr,"THREAD %d what the fuck is result: 0x%ld\n",MYTHREAD,&result->next);
+    result = (shared kmer_t*)res.next;
+    fprintf(stderr,"THREAD %d what the fuck is result: 0x%ld\n",MYTHREAD,result);
+    fprintf(stderr,"THREAD %d what the fuck is result: %s %s 0x%ld\n",MYTHREAD,cmp,packedKmer,res.next);
   }
   return NULL;
 }
@@ -169,17 +227,19 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
   next_empty_kmer->r_ext = right_ext;
   
   /* Fix the next pointer to point to the appropriate kmer struct */
-  next_empty_kmer->next = hashtable->table[hashval].head;
+  next_empty_kmer->next = (shared void*)hashtable->table[hashval].head;
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
+
 
   /*
   char buf[KMER_LENGTH+1];
   memcpy(buf,kmer,KMER_LENGTH);
   buf[KMER_LENGTH] = '\0';
-  fprintf(stderr,"THREAD %d adding to table (which) %d at posInHeap %d: loc 0x%lx %s THREAD %d which %d pos %2d\n",
-      MYTHREAD,which,memory_heap->posInHeap,(long int) next_empty_kmer,buf,MYTHREAD,which,pos);
-      */
+  // fprintf(stderr,"THREAD %d adding to table (which) %d at posInHeap %d: loc 0x%lx %s THREAD %d which %d pos %2d\n",
+  //     MYTHREAD,which,memory_heap->posInHeap,(long int) next_empty_kmer,buf,MYTHREAD,which,pos);
+  fprintf(stdout,"THREAD %d added kmer %s next at 0x%ld\n",MYTHREAD,buf,next_empty_kmer->next);
+  */
   
   /* Increase the heap pointer */
   memory_heap->posInHeap++;
