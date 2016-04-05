@@ -22,7 +22,7 @@ void hex_dump(void* ptr,size_t size)
   for(size_t i=0;i<size;i++)
   {
     fprintf(stderr,"WTF IS THE I %d\n",i);
-    sprintf(s+3*i,"%x ",*(((char*)p)+i) & 0xff);
+    sprintf(s+3*i,"%2x ",*(((char*)p)+i) & 0xff);
   }
   s[size*3] = '\n';
   s[size*3 + 1] = '\n';
