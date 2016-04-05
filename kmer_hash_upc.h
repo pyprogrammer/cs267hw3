@@ -23,8 +23,8 @@ void hex_dump(void* ptr,size_t size)
     if(i % 16) sprintf(s+3*i,"%x ",(char*)p);
     else sprintf(s+3*i,"%x\n",(char*)p);
   }
-  fputs(stderr,s);
-  fputs(stderr,"\n\n");
+  fputs(s,stderr);
+  fputs("\n\n",stderr);
 }
 
 
