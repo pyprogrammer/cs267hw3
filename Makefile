@@ -10,7 +10,7 @@ DEFINE 	= -DKMER_LENGTH=$(KMER_LENGTH) -DKMER_PACKED_LENGTH=$(KMER_PACKED_LENGTH
 HEADERS	= contig_generation.h kmer_hash.h packingDNAseq.h
 UPCHEADERS	= contig_upc.h kmer_hash_upc.h packingDNAseq.h
 LIBS	=
-UPCFLAGS = -g
+UPCFLAGS =
 
 TARGETS	= serial pgen kh
 

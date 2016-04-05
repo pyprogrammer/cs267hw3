@@ -16,6 +16,8 @@ const unsigned char *right = "F";
 
 int main()
 {
+  fprintf(stderr,"lock check start\n");
+
   shared int *t = (shared int*) upc_all_alloc(1,sizeof(int));
   int i;
   upc_lock_t *shitty_lock;
@@ -25,6 +27,10 @@ int main()
   fprintf(stderr,"THREAD %d i %d\n",MYTHREAD,i);
   t[0] = i+1;
   upc_unlock(shitty_lock);
+
+  upc_barrier;
+
+  fprintf(stderr,"making a hash\n");
 
   shared memory_heap_t *mem = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
   shared hash_table_t *tab = upc_create_hash_table(tsize*THREADS,mem);
@@ -46,6 +52,8 @@ int main()
   }
   */
 
+  fprintf(stderr,"adding shit\n");
+
   shared kmer_t* added;
   unsigned char *s; 
   s = (unsigned char*) sample + MYTHREAD*0;
@@ -56,13 +64,18 @@ int main()
 
   for(int i=0; i < tsize ; i++)
   {
-    added = add_kmer(tab, mem, s + (i), *left, *right);
-    memcpy(buf,s + (i),KMER_LENGTH);
-    fprintf(stderr,"(%d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
+    if(i%THREADS == MYTHREAD)
+    {
+      added = add_kmer(tab, mem, s + (i), *left, *right);
+      memcpy(buf,s + (i),KMER_LENGTH);
+      fprintf(stderr,"(%d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
+    }
   }
 
   fprintf(stderr,"MYTHREAD %d all kmers added!\n",MYTHREAD);
   upc_barrier;
+
+  fprintf(stderr,"finding shit\n");
 
   shared kmer_t* srced;
 

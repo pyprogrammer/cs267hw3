@@ -81,7 +81,7 @@ int main(int argc, char *argv[]){
     /* Move to the next k-mer in the input working_buffer */
     ptr += LINE_SIZE*THREADS;
   }
-  fprintf(stderr,"done reading input\n");
+  fprintf(stderr,"done reading input (read %d %d of %d)\n",ptr,cur_chars_read,total_chars_to_read);
 
   upc_barrier;
   inputTime += gettime();

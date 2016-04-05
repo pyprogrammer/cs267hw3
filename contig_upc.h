@@ -42,7 +42,7 @@ typedef struct kmer_t kmer_t;
 struct kmer_t{
    int pos;
    int next_pos;
-   char kmer[KMER_LENGTH];
+   char kmer[KMER_PACKED_LENGTH];
    char l_ext;
    char r_ext;
    int next_kmer_pos;
