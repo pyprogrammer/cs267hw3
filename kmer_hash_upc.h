@@ -18,6 +18,7 @@ void hex_dump(void* ptr,size_t size)
 {
   char *s = malloc(size * 3);
   char *p = (char*) ptr;
+  fprintf(stderr,"size: %d\n",size);
   for(size_t i=0;i<size;i++)
   {
     sprintf(s+3*i,"%x ",*((char*)p+i) & 0xff);
