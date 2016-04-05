@@ -16,15 +16,18 @@ typedef shared memory_heap_t* mem_dir_t;
 
 void hex_dump(void* ptr,size_t size)
 {
-  char *s = malloc(size * 3);
+  char *s = (char*) malloc(size * 3 + 3);
   char *p = (char*) ptr;
   fprintf(stderr,"size: %d\n",size);
   for(size_t i=0;i<size;i++)
   {
     sprintf(s+3*i,"%x ",*((char*)p+i) & 0xff);
   }
+  s[size*3] = '\n';
+  s[size*3 + 1] = '\n';
+  s[size*3 + 2] = '\0';
   fputs(s,stderr);
-  fputs("\n\n",stderr);
+  free(s);
 }
 
 
