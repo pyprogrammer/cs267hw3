@@ -14,6 +14,20 @@ typedef shared hash_table_t* hash_dir_t;
 typedef shared memory_heap_t* mem_dir_t;
 
 
+void hex_dump(void* ptr,size_t size)
+{
+  char *s = malloc(size * 3);
+  char *p = (char*) ptr;
+  for(size_t i=0;i<size;i++)
+  {
+    if(i % 16) sprintf(s+3*i,"%x ",(char*)p);
+    else sprintf(s+3*i,"%x\n",(char*)p);
+  }
+  fputs(stderr,s);
+  fputs(stderr,"\n\n");
+}
+
+
 /* Creates hashtable for UPC */
 /* Whenever something is called on a hash_table_t or memory_heap_t, instead call it on
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
@@ -234,7 +248,7 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
 
   kmer_t kmer_buf;
   upc_memget(&kmer_buf,next_empty_kmer,sizeof(kmer_t));
-  fprintf(stderr,"the stupid string %*.*s\n",sizeof(kmer_t),sizeof(kmer_t),&kmer_buf);
+  hexdump((void*)kmer_buf,sizeof(kmer_t));
 
   /*
   char buf[KMER_LENGTH+1];
