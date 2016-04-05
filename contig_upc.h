@@ -45,6 +45,7 @@ struct kmer_t{
    char kmer[KMER_LENGTH];
    char l_ext;
    char r_ext;
+   int next_kmer_pos;
 };
 
 /* Start k-mer data structure */

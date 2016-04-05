@@ -91,6 +91,7 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
     if(n_pos == -1) break;
     result = memory_heap->heap + n_pos;
   }
+  fprintf(stderr, "DID NOT FIND");
   exit(-1);
   return NULL;
 }
@@ -112,7 +113,7 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   memory_heap->posInHeap++;
   upc_unlock(global_lock);
 
-  fprintf(stderr,"THREAD %d trying to add to pos %d\n",MYTHREAD,pos);
+  //fprintf(stderr,"THREAD %d trying to add to pos %d\n",MYTHREAD,pos);
 
   // shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
   shared kmer_t *next_empty_kmer = memory_heap->heap + pos;

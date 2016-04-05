@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
       {
         fprintf(stderr,"THREAD %d wtf there's a null %s\n",MYTHREAD,newkmer+1);
       }
-	  curr->next = next;
+	  curr->next_kmer_pos = next->pos;
   }
 
   fprintf(stderr,"done linking\n");
@@ -155,13 +155,16 @@ int main(int argc, char *argv[]){
 	  while (right_ext != 'F') {
 		cur_contig[posInContig] = right_ext;
 		posInContig++;
-		cur_kmer_ptr = cur_kmer_ptr->next;
+		int next_pos = cur_kmer_ptr->next_kmer_pos;
+		cur_kmer_ptr = memory_heap->heap + next_pos;
+		//cur_kmer_ptr = cur_kmer_ptr->next;
 		right_ext = cur_kmer_ptr->r_ext;
 	  }
 
 	  /* Print the contig since we have found the corresponding terminal node */
 	  cur_contig[posInContig] = '\0';
 	  fprintf(output,"%s\n", cur_contig);
+	  if (i == 0) fprintf(stderr, "FIRST\n");
 	  contigID++;
 	  //totBases += strlen(cur_contig);
 
