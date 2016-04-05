@@ -37,9 +37,12 @@ shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap
 
   result = upc_all_alloc(THREADS,sizeof(hash_table_t));
   global_tables = (shared bucket_t*) upc_all_alloc( THREADS, my_size * sizeof(bucket_t) );
-  (result+MYTHREAD)->size = my_size;
-  (result+MYTHREAD)->table = (shared bucket_t*) &global_tables[MYTHREAD*my_size];
-  (result+MYTHREAD)->write_lock = upc_global_lock_alloc();
+  result[MYTHREAD].size = my_size;
+  result[MYTHREAD].table = (shared bucket_t*) &global_tables[MYTHREAD*my_size];
+  result[MYTHREAD].write_lock = upc_global_lock_alloc();
+//  (result+MYTHREAD)->size = my_size;
+//  (result+MYTHREAD)->table = (shared bucket_t*) &global_tables[MYTHREAD*my_size];
+//  (result+MYTHREAD)->write_lock = upc_global_lock_alloc();
 
   *memory_heap = (shared memory_heap_t*) upc_all_alloc(THREADS,sizeof(memory_heap_t));
   heaps = (shared bucket_t *) upc_all_alloc( THREADS, heap_size * sizeof(kmer_t) );

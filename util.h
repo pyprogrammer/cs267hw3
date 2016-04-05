@@ -19,6 +19,7 @@ typedef struct entrylistel {
 typedef struct {
 	entrylistel_t* start;
 	entrylistel_t* end;
+	int size;
 } entrylist_t;
 
 typedef struct {
@@ -55,10 +56,12 @@ void init_list(entrylist_t* elist)
 {
 	elist->start = NULL;
 	elist->end = NULL;
+	elist->size = 0;
 }
 
 void append_list(entrylist_t* elist, shared kmer_t* entry, char left_ext, char right_ext)
 {
+	elist->size++;
 	entrylistel_t* el = (entrylistel_t*) malloc(sizeof(entrylistel_t));
 	el->prev = NULL;
 	el->next = NULL;
@@ -82,6 +85,7 @@ void pop_list(entrylist_t* elist, shared kmer_t** ret, char* left_ext, char* rig
 	*left_ext = last->left_ext;
 	*right_ext = last->right_ext;
 	free(last);
+	elist->size--;
 }
 
 void shift_into_kmer(shared kmer_t* current, char* dest, char append)
@@ -91,5 +95,15 @@ void shift_into_kmer(shared kmer_t* current, char* dest, char append)
 	unpackSequence(cpy, dest, KMER_LENGTH);
 	dest[KMER_LENGTH] = append;
 //	packSequence(buf+1, dest->kmer, KMER_LENGTH);
+}
+
+void print_kmer(shared kmer_t* kmer)
+{
+	unsigned char cpy[KMER_LENGTH+1];
+	unsigned char packed[KMER_PACKED_LENGTH];
+	cpy[KMER_LENGTH] = 0;
+	upc_memget(packed, kmer->kmer, KMER_LENGTH);
+	unpackSequence(packed, cpy, KMER_LENGTH);
+	fprintf(stderr, "KMER: %s\n", cpy);
 }
 #endif

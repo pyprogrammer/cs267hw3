@@ -20,7 +20,7 @@ int main(int argc, char *argv[]){
   double inputTime=0.0, constrTime=0.0, traversalTime=0.0;
   char *input_name;
   int64_t nKmers, total_chars_to_read;
-  int64_t ptr = LINE_SIZE*MYTHREAD;
+  int64_t ptr = LINE_SIZE*MYTHREAD; // Start on line MYTHREAD
   int64_t cur_chars_read = 0;
   char* input_UFX_name = argv[1];
   unsigned char* working_buffer;
@@ -48,6 +48,9 @@ int main(int argc, char *argv[]){
 
   hashtable = upc_create_hash_table(nKmers, &memory_heap);
 
+  upc_barrier;
+  if (MYTHREAD==0) fprintf(stderr, "ALLOCATED TABLE\n");
+  
   total_chars_to_read = nKmers *LINE_SIZE;
   working_buffer = (unsigned char*) malloc(total_chars_to_read * sizeof(unsigned char));
   inputFile = fopen(input_UFX_name, "r");
@@ -60,6 +63,9 @@ int main(int argc, char *argv[]){
   entrylist_t* startlist = (entrylist_t*) malloc(sizeof(entrylist_t));
   init_list(startlist);
   
+  if (MYTHREAD==0) fprintf(stderr, "STARTING READ with %d THREADS\n", THREADS);
+  
+  int num_read = 0;
   while (ptr < cur_chars_read) {
     /* working_buffer[ptr] is the start of the current k-mer                */
     /* so current left extension is at working_buffer[ptr+KMER_LENGTH+1]    */
@@ -80,10 +86,14 @@ int main(int argc, char *argv[]){
 
     /* Move to the next k-mer in the input working_buffer */
     ptr += LINE_SIZE*THREADS;
+    num_read++;
   }
+  
 
 
   upc_barrier;
+  
+  fprintf(stderr, "THREAD %d FINISHED READING %d\n", MYTHREAD, num_read);
   inputTime += gettime();
   
 
@@ -100,15 +110,25 @@ int main(int argc, char *argv[]){
   shared kmer_t* curr;
   char left_ext;
   char right_ext;
+  long cnt = 0;
   char newkmer[KMER_LENGTH+1];
   while(entrylist->end != NULL)
   {
+	  //fprintf(stderr, "size: %d\n", entrylist->size);
 	  pop_list(entrylist, &curr, &left_ext, &right_ext);
+	  cnt++;
 	  if (right_ext == 'F') continue; // we done here
 	  shift_into_kmer(curr, newkmer, right_ext);
 	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
+	  if (next == NULL)
+	  {
+		  fprintf(stderr, "KMER NULL LOOKUP: ");
+		  print_kmer(curr);
+	  }
 	  curr->next = next;
   }
+  
+  fprintf(stderr, "THREAD %d FINISHED BUILDING %d\n", MYTHREAD, cnt);
   upc_barrier;
   constrTime += gettime();
   
@@ -148,7 +168,13 @@ int main(int argc, char *argv[]){
 	  while (right_ext != 'F') {
 		cur_contig[posInContig] = right_ext;
 		posInContig++;
+		if (cur_kmer_ptr->next == NULL){
+			print_kmer(cur_kmer_ptr);
+			fprintf(stderr, "NULL PTR FOUND\n");
+			fprintf(stderr, "%c\n", cur_kmer_ptr->r_ext);
+		}
 		cur_kmer_ptr = cur_kmer_ptr->next;
+		
 		right_ext = cur_kmer_ptr->r_ext;
 	  }
 
