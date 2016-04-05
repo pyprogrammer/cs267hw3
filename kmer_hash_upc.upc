@@ -65,7 +65,7 @@ int main()
   {
     added = add_kmer(tab, mem, s + (i%200), *left, *right);
     upc_memget(&kmerbuf,added,sizeof(kmer_t));
-    hex_dump((void*)&kmerbuf,sizeof(kmer_t));
+    // hex_dump((void*)&kmerbuf,sizeof(kmer_t));
     // memcpy(buf,s + (i%200),KMER_LENGTH);
     // fprintf(stderr,"(%d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
   }

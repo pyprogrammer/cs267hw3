@@ -28,7 +28,7 @@ void hex_dump(void* ptr,size_t size)
   s[size*3] = '\n';
   s[size*3 + 1] = '\n';
   s[size*3 + 2] = '\0';
-  fputs(s,stderr);
+  // fputs(s,stderr);
   free(s);
 }
 
@@ -198,6 +198,7 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
 
     fprintf(stderr,"THREAD %d what the fuck is result: 0x%ld\n",MYTHREAD,&result->next);
     result = (shared kmer_t*)res.next;
+    hex_dump((void*)&res,sizeof(kmer_t));
     fprintf(stderr,"THREAD %d what the fuck is result: 0x%ld\n",MYTHREAD,result);
     fprintf(stderr,"THREAD %d what the fuck is result: %s %s 0x%ld\n",MYTHREAD,cmp,packedKmer,res.next);
   }
