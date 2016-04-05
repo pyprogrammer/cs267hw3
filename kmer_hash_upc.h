@@ -251,7 +251,7 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
 
   kmer_t kmer_buf;
   upc_memget(&kmer_buf,next_empty_kmer,sizeof(kmer_t));
-  hex_dump((void*)&kmer_buf,sizeof(kmer_t));
+  // hex_dump((void*)&kmer_buf,sizeof(kmer_t));
 
   /*
   char buf[KMER_LENGTH+1];
