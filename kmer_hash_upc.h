@@ -244,7 +244,7 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
   
   /* Increase the heap pointer */
   memory_heap->posInHeap++;
-  fprintf(stderr,"posInHeap %4d on %d\n",memory_heap->posInHeap,which);
+  fprintf(stderr,"posInHeap %10d on %d\n",memory_heap->posInHeap,which);
 
   upc_unlock(memory_heap->write_lock);
   upc_unlock(hashtable->write_lock);
