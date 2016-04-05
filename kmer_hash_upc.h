@@ -20,7 +20,7 @@ upc_lock_t *global_lock;
 /* Whenever something is called on a hash_table_t or memory_heap_t, instead call it on
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
-shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap_t *memory_heap)
+shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_t *memory_heap)
 {
   shared hash_table_t * result;
   int64_t n_buckets = nEntries * LOAD_FACTOR;
@@ -83,9 +83,14 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
     unpackSequence(cmp,(unsigned char*) buf1,KMER_LENGTH);
     unpackSequence(kmer,(unsigned char*) buf2,KMER_LENGTH);
     fprintf(stderr,"THREAD %d comparing %s and %s\n",MYTHREAD,buf1,buf2);
-    result = result->next;
+
+    int n_pos = result->next_pos;
+    fprintf(stderr,"THREAD %d no success, looking at pos %d next\n",MYTHREAD,n_pos);
+    if(n_pos == -1) break;
+    result = memory_heap->heap + n_pos;
   }
   exit(-1);
+  return NULL;
 }
 
 /* Adds a kmer and its extensions in the hash table (note that a memory heap should be preallocated. ) */
@@ -106,8 +111,10 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   memory_heap->posInHeap++;
   upc_unlock(global_lock);
 
+  fprintf(stderr,"THREAD %d trying to add to pos %d\n",MYTHREAD,pos);
+
   // shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
-  shared kmer_t *next_empty_kmer = memory_heap->heap;
+  shared kmer_t *next_empty_kmer = memory_heap->heap + pos;
   
   /* Add the contents to the appropriate kmer struct in the heap */
   upc_memput(next_empty_kmer->kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
@@ -115,7 +122,15 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   next_empty_kmer->r_ext = right_ext;
   
   /* Fix the next pointer to point to the appropriate kmer struct */
-  next_empty_kmer->next = hashtable->table[hashval].head;
+  if(hashtable->table[hashval].head == NULL)
+  {
+    next_empty_kmer->next_pos = -1;
+  }
+  else
+  {
+    next_empty_kmer->next_pos = hashtable->table[hashval].head->pos;
+  }
+  next_empty_kmer->pos = pos;
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
 

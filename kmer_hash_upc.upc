@@ -17,10 +17,9 @@ const unsigned char *right = "F";
 int main()
 {
   shared memory_heap_t *mem = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
-  shared hash_table_t *tab = upc_create_hash_table(tsize,mem);
+  shared hash_table_t *tab = upc_create_hash_table(tsize*THREADS,mem);
   
-  if(MYTHREAD==0)
-    fprintf(stderr,"tab[%d].size: %d\ntab[%d].size: %d\ntab[%d].size: %d\n",0,tab[0].size,1,tab[1].size,2,tab[2].size);
+  fprintf(stderr,"THREAD %d table size %d\n",MYTHREAD,tab->size);
 
   fprintf(stderr,"\n\n\n\n\n");
 

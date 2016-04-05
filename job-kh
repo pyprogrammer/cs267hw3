@@ -11,3 +11,4 @@ P=4				# Number of UPC processes to run
 
 # Run program
 upcrun -n $P -shared-heap=1G ./kh
+# aprun -n $P -N $P ./kh
