@@ -22,6 +22,11 @@ int main()
   char x = 0xfd;
   hex_dump((void*)&x,1);
 
+  for(int i=0;i<20;i++)
+  {
+    hex_dump((void*)sample,i);
+  }
+
   shared memory_heap_t *mem;
   shared hash_table_t *tab = upc_create_hash_table(TEST_SIZE,&mem);
   

@@ -21,7 +21,7 @@ void hex_dump(void* ptr,size_t size)
   fprintf(stderr,"size: %d\n",size);
   for(size_t i=0;i<size;i++)
   {
-    sprintf(s+3*i,"%x ",*((char*)p+i) & 0xff);
+    sprintf(s+3*i,"%x ",*(((char*)p)+i) & 0xff);
   }
   s[size*3] = '\n';
   s[size*3 + 1] = '\n';
