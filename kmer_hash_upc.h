@@ -21,9 +21,10 @@ void hex_dump(void* ptr,size_t size)
   fprintf(stderr,"size: %d\n",size);
   for(size_t i=0;i<size;i++)
   {
-    fprintf(stderr,"%hhx ",p[i] & 0xff);
+    fprintf(stderr,"%.2hhx ",p[i] & 0xff);
     sprintf(s+3*i,"%hhx ",p[i] & 0xff);
   }
+  fprintf(stderr,"\n");
   s[size*3] = '\n';
   s[size*3 + 1] = '\n';
   s[size*3 + 2] = '\0';
