@@ -44,9 +44,9 @@ int main(int argc, char *argv[]){
   input_name = argv[1];
   nKmers = getNumKmersInUFX(input_name);
   shared hash_table_t *hashtable;
-  shared memory_heap_t *memory_heap;
+  shared memory_heap_t *memory_heap = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
 
-  hashtable = upc_create_hash_table(nKmers, &memory_heap);
+  hashtable = upc_create_hash_table(nKmers, memory_heap);
 
   total_chars_to_read = nKmers *LINE_SIZE;
   working_buffer = (unsigned char*) malloc(total_chars_to_read * sizeof(unsigned char));
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]){
     /* Move to the next k-mer in the input working_buffer */
     ptr += LINE_SIZE*THREADS;
   }
-
+  fprintf(stderr,"done reading input\n");
 
   upc_barrier;
   inputTime += gettime();
@@ -100,15 +100,22 @@ int main(int argc, char *argv[]){
   shared kmer_t* curr;
   char left_ext;
   char right_ext;
-  char newkmer[KMER_LENGTH+1];
+  char newkmer[KMER_LENGTH+2];
+  newkmer[KMER_LENGTH+1] = '\0';
   while(entrylist->end != NULL)
   {
 	  pop_list(entrylist, &curr, &left_ext, &right_ext);
 	  if (right_ext == 'F') continue; // we done here
 	  shift_into_kmer(curr, newkmer, right_ext);
 	  shared kmer_t* next = lookup_kmer_upc(hashtable, memory_heap, newkmer+1);
+      if(next==NULL)
+      {
+        fprintf(stderr,"THREAD %d wtf there's a null %s\n",MYTHREAD,newkmer+1);
+      }
 	  curr->next = next;
   }
+
+  fprintf(stderr,"done linking\n");
   upc_barrier;
   constrTime += gettime();
   
@@ -135,7 +142,7 @@ int main(int argc, char *argv[]){
   char outputFilename[32];
   sprintf(outputFilename, "pgen.%d.out", MYTHREAD);
   FILE* output = fopen(outputFilename, "w");
-  while(startlist->end != NULL)
+  for(int i=0;startlist->end != NULL;i++)
   {
 	  pop_list(startlist, &cur_kmer_ptr, &left_ext, &right_ext);
 	  unpackSequence((unsigned char*) cur_kmer_ptr->kmer,  (unsigned char*) unpackedKmer, KMER_LENGTH);
@@ -157,7 +164,12 @@ int main(int argc, char *argv[]){
 	  fprintf(output,"%s\n", cur_contig);
 	  contigID++;
 	  //totBases += strlen(cur_contig);
+
+      if(!i%10000)
+        fprintf(stderr,"iteration %d\n",i);
+
   }
+  fprintf(stderr,"done travelling salesman\n");
   fclose(output);
 
 

@@ -13,50 +13,26 @@
 typedef shared hash_table_t* hash_dir_t;
 typedef shared memory_heap_t* mem_dir_t;
 
+upc_lock_t *global_lock;
+
 
 /* Creates hashtable for UPC */
 /* Whenever something is called on a hash_table_t or memory_heap_t, instead call it on
  * hash_dir_t[MYTHREAD] and mem_dir_t[MYTHREAD]
  */
-shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap_t **memory_heap)
+shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap_t *memory_heap)
 {
-  shared hash_table_t *result;
-  shared bucket_t *global_tables; 
-  shared bucket_t *heaps;
-
+  shared hash_table_t * result;
   int64_t n_buckets = nEntries * LOAD_FACTOR;
-  int64_t my_size = (n_buckets + THREADS - 1)/THREADS;
-  int64_t heap_size = ((nEntries * LOAD_FACTOR + THREADS - 1)/THREADS);
 
-  fprintf(stderr,"nEntries %ld my_size %ld heap_size %ld\n",nEntries,my_size,heap_size);
-  if(n_buckets < 0 || my_size < 0 || heap_size <0)
-  {
-    fprintf(stderr,"sizes are zero! check yourself before you wreck yourself.\n");
-    exit(1);
-  }
+  result = (shared hash_table_t*) upc_all_alloc(1,sizeof(hash_table_t));
+  result->size = n_buckets;
+  result->table = (shared bucket_t*) upc_all_alloc(n_buckets,sizeof(bucket_t));
 
-  result = upc_all_alloc(THREADS,sizeof(hash_table_t));
-  global_tables = (shared bucket_t*) upc_all_alloc( THREADS, my_size * sizeof(bucket_t) );
-  (result+MYTHREAD)->size = my_size;
-  (result+MYTHREAD)->table = (shared bucket_t*) &global_tables[MYTHREAD*my_size];
-  (result+MYTHREAD)->write_lock = upc_global_lock_alloc();
+  memory_heap->heap = (shared kmer_t*) upc_all_alloc(nEntries,sizeof(kmer_t));
+  memory_heap->posInHeap = 0;
 
-  *memory_heap = (shared memory_heap_t*) upc_all_alloc(THREADS,sizeof(memory_heap_t));
-  heaps = (shared bucket_t *) upc_all_alloc( THREADS, heap_size * sizeof(kmer_t) );
-
-  memory_heap[0][MYTHREAD].heap = (shared kmer_t*) (((shared char*) heaps) + (MYTHREAD * heap_size) * sizeof(kmer_t));
-  memory_heap[0][MYTHREAD].posInHeap = 0;
-  memory_heap[0][MYTHREAD].write_lock = upc_global_lock_alloc();
-
-  /*
-  fprintf(stderr,"size of memory_heap[0][i] %d size of ptr %d\n",sizeof(memory_heap[0][MYTHREAD]),sizeof(void*));
-  fprintf(stderr,"total heap size %d\n",THREADS * heap_size * sizeof(kmer_t));
-  for(int i=0;i<THREADS;i++)
-  {
-    fprintf(stderr,"heap for thread %d at 0x%ld\n",i,memory_heap[0][i].heap);
-    fprintf(stderr,"DIFF thread %d at 0x%ld\n",i,(shared char*)memory_heap[0][i].heap - (shared char*)memory_heap[0][0].heap);
-  }
-  */
+  global_lock = upc_global_lock_alloc();
 
   return result;
 }
@@ -64,19 +40,12 @@ shared hash_table_t *upc_create_hash_table(uint64_t nEntries, shared memory_heap
 /* Auxiliary function for computing hash values */
 int64_t hashseq(int64_t  hashtable_size, char *seq, int size)
 {
-  if(size < 8)
-  {
-    unsigned long hashval;
-    hashval = 5381;
-    for(int i = 0; i < size; i++) {
-      hashval = seq[i] + (hashval << 5) + hashval;
-    }
-    return hashval % hashtable_size;
+  unsigned long hashval;
+  hashval = 5381;
+  for(int i = 0; i < size; i++) {
+    hashval = seq[i] + (hashval << 5) + hashval;
   }
-
-  uint64_t lol = *((uint64_t*) seq);
-  
-  return lol % hashtable_size;
+  return hashval % hashtable_size;
 }
 
 /* Returns the hash value of a kmer */
@@ -88,34 +57,35 @@ int64_t hashkmer(int64_t  hashtable_size, char *seq)
 /* Looks up a kmer in the hash table and returns a pointer to that entry */
 shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, const unsigned char *kmer)
 {
+  init_LookupTable();
   char packedKmer[KMER_PACKED_LENGTH];
   packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
-  int64_t hashval = hashkmer(hashtable->size * THREADS, (char*) packedKmer);
-  int64_t which = hashval % THREADS;
-
-  hashval = hashval / THREADS;
-
-  hashtable += which;
+  int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
 
   shared kmer_t *result;
   
   result = hashtable->table[hashval].head;
   unsigned char cmp[KMER_PACKED_LENGTH+1];
   cmp[KMER_PACKED_LENGTH] = (unsigned char) 0;
+  unsigned char buf1[KMER_LENGTH + 1];
+  unsigned char buf2[KMER_LENGTH + 1];
+  buf1[KMER_LENGTH] = '\0';
+  buf2[KMER_LENGTH] = '\0';
   
   while(result!=NULL) {
+    fprintf(stderr,"THREAD %d while loop starting\n",MYTHREAD);
     upc_memget(&cmp,result->kmer,KMER_PACKED_LENGTH);
-    // fprintf(stderr,"packedKmer %s || cmp %s\n",packedKmer,cmp);
+    // fprintf(stderr,"THREAD %d packedKmer %s || cmp %s\n",MYTHREAD,packedKmer,cmp);
     if( memcmp(packedKmer, cmp, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
       return result;
     }
+    fprintf(stderr,"THREAD %d memory getting\n",MYTHREAD);
+    unpackSequence(cmp,(unsigned char*) buf1,KMER_LENGTH);
+    unpackSequence(kmer,(unsigned char*) buf2,KMER_LENGTH);
+    fprintf(stderr,"THREAD %d comparing %s and %s\n",MYTHREAD,buf1,buf2);
     result = result->next;
-    /*
-    for(int i=0;i<20;i++)
-      fprintf(stderr,"next one %d: result? 0x%lx kmer? 0x%lx\n",i,(shared void*)result,(shared void*)result->kmer);
-      */
   }
-  return NULL;
+  exit(-1);
 }
 
 kmer_t* lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer)
@@ -124,35 +94,23 @@ kmer_t* lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer)
 }
 
 /* Adds a kmer and its extensions in the hash table (note that a memory heap should be preallocated. ) */
-shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps,
+shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap,
     const unsigned char *kmer, char left_ext, char right_ext)
 {
   /* Pack a k-mer sequence appropriately */
-  shared hash_table_t *hashtable;
-  shared memory_heap_t *memory_heap;
   char packedKmer[KMER_PACKED_LENGTH];
 
   packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
 
-  int64_t hashval = hashkmer(tables->size * THREADS, (char*) packedKmer);
+  int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
 
-  int64_t which = hashval % THREADS;
-  hashval = hashval/THREADS;
-  hashtable = tables + which;
-  memory_heap = heaps + which;
 
-  upc_lock(hashtable->write_lock);
-  while(1)
-  {
-    if(!upc_lock_attempt(memory_heap->write_lock))
-    {
-      upc_unlock(hashtable->write_lock);
-      upc_lock(hashtable->write_lock);
-    }
-    else break;
-  }
-
+  upc_lock(global_lock);
   int64_t pos = memory_heap->posInHeap;
+  /* Increase the heap pointer */
+  memory_heap->posInHeap++;
+  upc_unlock(global_lock);
+
   shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
   
   /* Add the contents to the appropriate kmer struct in the heap */
@@ -165,20 +123,6 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
 
-  /*
-  char buf[KMER_LENGTH+1];
-  memcpy(buf,kmer,KMER_LENGTH);
-  buf[KMER_LENGTH] = '\0';
-  fprintf(stderr,"THREAD %d adding to table (which) %d at posInHeap %d: loc 0x%lx %s THREAD %d which %d pos %2d\n",
-      MYTHREAD,which,memory_heap->posInHeap,(long int) next_empty_kmer,buf,MYTHREAD,which,pos);
-      */
-  
-  /* Increase the heap pointer */
-  memory_heap->posInHeap++;
-
-  upc_unlock(memory_heap->write_lock);
-  upc_unlock(hashtable->write_lock);
-  
   return next_empty_kmer;
 }
 

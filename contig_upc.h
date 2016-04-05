@@ -21,7 +21,7 @@
 #endif
 
 #ifndef LOAD_FACTOR
-#define LOAD_FACTOR 5
+#define LOAD_FACTOR 1
 #endif
 
 #ifndef LINE_SIZE

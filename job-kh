@@ -7,7 +7,7 @@
 #SBATCH -e upc-HW3.%j.err
 
 # Parameters
-P=3				# Number of UPC processes to run
+P=4				# Number of UPC processes to run
 
 # Run program
 upcrun -n $P -shared-heap=1G ./kh

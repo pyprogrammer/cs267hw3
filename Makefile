@@ -28,6 +28,9 @@ kh: 	kmer_hash_upc.upc $(UPCHEADERS)
 kh-test:
 	make clean && make kh && sbatch job-kh
 
+check:
+	make clean && make && sbatch job-upc
+
 scratch:
 	cp ~/code/hw3/* . && make clean && make && sbatch job-upc
 
