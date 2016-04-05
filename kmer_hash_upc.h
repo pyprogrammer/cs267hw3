@@ -232,6 +232,9 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
 
+  kmer_t kmer_buf;
+  upc_memget(&kmer_buf,next_empty_kmer,sizeof(kmer_t));
+  fprintf(stderr,"the stupid string %.*s\n",sizeof(kmer_t),&kmer_buf);
 
   /*
   char buf[KMER_LENGTH+1];
