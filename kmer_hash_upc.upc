@@ -56,13 +56,17 @@ int main()
   unsigned char buf[KMER_LENGTH+1];
   buf[KMER_LENGTH] = (unsigned char) 0;
 
+  kmer_t kmerbuf;
+
   upc_barrier;
   sleep(1);
 
   for(int i=0; i < TEST_SIZE ; i++)
   {
     added = add_kmer(tab, mem, s + (i%200), *left, *right);
-    memcpy(buf,s + (i%200),KMER_LENGTH);
+    upc_memget(&kmerbuf,added,sizeof(kmer_t));
+    hex_dump((void*)&kmerbuf,sizeof(kmer_t));
+    // memcpy(buf,s + (i%200),KMER_LENGTH);
     // fprintf(stderr,"(%d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
   }
 
