@@ -16,6 +16,16 @@ const unsigned char *right = "F";
 
 int main()
 {
+  shared int *t = (shared int*) upc_all_alloc(1,sizeof(int));
+  int i;
+  upc_lock_t *shitty_lock;
+  shitty_lock = upc_all_lock_alloc();
+  upc_lock(shitty_lock);
+  upc_memget(&i,t,sizeof(int));
+  fprintf(stderr,"THREAD %d i %d\n",MYTHREAD,i);
+  t[0] = i+1;
+  upc_unlock(shitty_lock);
+
   shared memory_heap_t *mem = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
   shared hash_table_t *tab = upc_create_hash_table(tsize*THREADS,mem);
   

@@ -32,7 +32,7 @@ shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_
   memory_heap->heap = (shared kmer_t*) upc_all_alloc(nEntries,sizeof(kmer_t));
   memory_heap->posInHeap = 0;
 
-  global_lock = upc_global_lock_alloc();
+  global_lock = upc_all_lock_alloc();
 
   return result;
 }
@@ -65,8 +65,8 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
   shared kmer_t *result;
   
   result = hashtable->table[hashval].head;
-  unsigned char cmp[KMER_PACKED_LENGTH+1];
-  cmp[KMER_PACKED_LENGTH] = (unsigned char) 0;
+  unsigned char cmp[KMER_LENGTH+1];
+  cmp[KMER_LENGTH] = (unsigned char) 0;
   unsigned char buf1[KMER_LENGTH + 1];
   unsigned char buf2[KMER_LENGTH + 1];
   buf1[KMER_LENGTH] = '\0';
@@ -74,15 +74,17 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
   
   while(result!=NULL) {
     fprintf(stderr,"THREAD %d while loop starting\n",MYTHREAD);
-    upc_memget(&cmp,result->kmer,KMER_PACKED_LENGTH);
+    upc_memget(&cmp,result->kmer,KMER_LENGTH);
     // fprintf(stderr,"THREAD %d packedKmer %s || cmp %s\n",MYTHREAD,packedKmer,cmp);
-    if( memcmp(packedKmer, cmp, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
+    if( memcmp(kmer, cmp, KMER_LENGTH * sizeof(char)) == 0 ) {
       return result;
     }
     fprintf(stderr,"THREAD %d memory getting\n",MYTHREAD);
-    unpackSequence(cmp,(unsigned char*) buf1,KMER_LENGTH);
-    unpackSequence(kmer,(unsigned char*) buf2,KMER_LENGTH);
-    fprintf(stderr,"THREAD %d comparing %s and %s\n",MYTHREAD,buf1,buf2);
+    // unpackSequence(cmp,(unsigned char*) buf1,KMER_LENGTH);
+    // unpackSequence(kmer,(unsigned char*) buf2,KMER_LENGTH);
+    // fprintf(stderr,"THREAD %d comparing %s and %s\n",MYTHREAD,buf1,buf2);
+    memcpy(buf2,kmer,KMER_LENGTH);
+    fprintf(stderr,"THREAD %d comparing %s and %s\n",MYTHREAD,cmp,buf2);
 
     int n_pos = result->next_pos;
     fprintf(stderr,"THREAD %d no success, looking at pos %d next\n",MYTHREAD,n_pos);
@@ -104,7 +106,6 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
 
   int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
 
-
   upc_lock(global_lock);
   int64_t pos = memory_heap->posInHeap;
   /* Increase the heap pointer */
@@ -117,7 +118,7 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   shared kmer_t *next_empty_kmer = memory_heap->heap + pos;
   
   /* Add the contents to the appropriate kmer struct in the heap */
-  upc_memput(next_empty_kmer->kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
+  upc_memput(next_empty_kmer->kmer, kmer, KMER_LENGTH * sizeof(char));
   next_empty_kmer->l_ext = left_ext;
   next_empty_kmer->r_ext = right_ext;
   
