@@ -16,13 +16,13 @@ typedef shared memory_heap_t* mem_dir_t;
 
 void hex_dump(void* ptr,size_t size)
 {
-  char *s = (char*) malloc(size * 3 + 3);
-  char *p = (char*) ptr;
+  unsigned char *s = (char*) malloc(size * 3 + 3);
+  unsigned char *p = (char*) ptr;
   fprintf(stderr,"size: %d\n",size);
   for(size_t i=0;i<size;i++)
   {
     fprintf(stderr,"WTF IS THE I %d\n",i);
-    sprintf(s+3*i,"%2x ",*(((char*)p)+i) & 0xff);
+    sprintf(s+3*i,"%hhx ",p[i] & 0xff);
   }
   s[size*3] = '\n';
   s[size*3 + 1] = '\n';
