@@ -19,6 +19,9 @@ const unsigned char *whoops="AAAAAAAAAAAAAAAAAAA\0";
 
 int main()
 {
+  char x = 0xfd;
+  hex_dump((void*)&x,1);
+
   shared memory_heap_t *mem;
   shared hash_table_t *tab = upc_create_hash_table(TEST_SIZE,&mem);
   
