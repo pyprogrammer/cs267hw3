@@ -88,11 +88,6 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
   exit(-1);
 }
 
-kmer_t* lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer)
-{
-  return NULL;
-}
-
 /* Adds a kmer and its extensions in the hash table (note that a memory heap should be preallocated. ) */
 shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap,
     const unsigned char *kmer, char left_ext, char right_ext)
@@ -111,7 +106,8 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   memory_heap->posInHeap++;
   upc_unlock(global_lock);
 
-  shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
+  // shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
+  shared kmer_t *next_empty_kmer = memory_heap->heap;
   
   /* Add the contents to the appropriate kmer struct in the heap */
   upc_memput(next_empty_kmer->kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
