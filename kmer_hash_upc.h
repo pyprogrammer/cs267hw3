@@ -234,7 +234,7 @@ shared kmer_t* add_kmer(shared hash_table_t *tables, shared memory_heap_t *heaps
 
   kmer_t kmer_buf;
   upc_memget(&kmer_buf,next_empty_kmer,sizeof(kmer_t));
-  fprintf(stderr,"the stupid string %.*s\n",sizeof(kmer_t),&kmer_buf);
+  fprintf(stderr,"the stupid string %*.*s\n",sizeof(kmer_t),sizeof(kmer_t),&kmer_buf);
 
   /*
   char buf[KMER_LENGTH+1];
