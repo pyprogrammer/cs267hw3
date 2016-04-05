@@ -20,8 +20,7 @@ void hex_dump(void* ptr,size_t size)
   char *p = (char*) ptr;
   for(size_t i=0;i<size;i++)
   {
-    if(i % 16 - 15) sprintf(s+3*i,"%x ",*((char*)p+i) & 0xff);
-    else sprintf(s+3*i,"%x\n",*((char*)p+i) & 0xff);
+    sprintf(s+3*i,"%x ",*((char*)p+i) & 0xff);
   }
   fputs(s,stderr);
   fputs("\n\n",stderr);
