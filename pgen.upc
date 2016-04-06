@@ -54,11 +54,19 @@ int main(int argc, char *argv[]){
   cur_chars_read = fread(working_buffer, sizeof(unsigned char),total_chars_to_read , inputFile);
   fclose(inputFile);
   
+  /*
   entrylist_t* entrylist = (entrylist_t*) malloc(sizeof(entrylist_t));
   init_list(entrylist);
-  
   entrylist_t* startlist = (entrylist_t*) malloc(sizeof(entrylist_t));
   init_list(startlist);
+  */
+
+  uint64_t local_entries = (nKmers + THREADS - 1 ) / THREADS;
+  kmer_t *entries = (kmer_t*) malloc(sizeof(kmer_t) * local_entries);
+  uint64_t *starts =  (uint64_t*) malloc(sizeof(uint64_t) * local_entries);
+
+  uint64_t n_entries = 0;
+  uint64_t n_starts = 0;
   
   while (ptr < cur_chars_read) {
     /* working_buffer[ptr] is the start of the current k-mer                */
@@ -72,11 +80,12 @@ int main(int argc, char *argv[]){
 	
 	/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
 	if (left_ext == 'F') {
-		append_list(startlist, location, left_ext, right_ext);
+		// append_list(startlist, location, left_ext, right_ext);
+      starts[n_starts++] = n_entries;
 	}
-    append_list(entrylist, location, left_ext, right_ext);
-    
-    
+    // append_list(entrylist, location, left_ext, right_ext);
+    upc_memget(entries + n_entries,location,sizeof(kmer_t));
+    n_entries++;
 
     /* Move to the next k-mer in the input working_buffer */
     ptr += LINE_SIZE*THREADS;
@@ -97,6 +106,7 @@ int main(int argc, char *argv[]){
   // Your code for graph construction here //
   ///////////////////////////////////////////
   
+  /*
   shared kmer_t* curr;
   char left_ext;
   char right_ext;
@@ -115,6 +125,25 @@ int main(int argc, char *argv[]){
       upc_lock(global_lock);
 	  curr->next_kmer_pos = next->pos;
       upc_unlock(global_lock);
+  }
+  */
+
+  shared kmer_t *scurr;
+  kmer_t * curr;
+  char left_ext;
+  char right_ext;
+  char newkmer[KMER_LENGTH+2];
+  newkmer[KMER_LENGTH+1] = '\0';
+  for(int i=0;i<n_entries;i++)
+  {
+    curr = entries + i;
+    if (curr->r_ext == 'F') continue;
+    scurr = memory_heap->heap + curr->pos;
+    unpackSequence(curr->kmer,newkmer,KMER_LENGTH);
+    newkmer[KMER_LENGTH] = curr->r_ext;
+
+    shared kmer_t* next = lookup_kmer_upc(hashtable,memory_heap,newkmer+1);
+    scurr->next_kmer_pos = next->pos;
   }
 
   fprintf(stderr,"done linking\n");
@@ -144,34 +173,39 @@ int main(int argc, char *argv[]){
   char outputFilename[32];
   sprintf(outputFilename, "pgen.%d.out", MYTHREAD);
   FILE* output = fopen(outputFilename, "w");
-  for(int i=0;startlist->end != NULL;i++)
+
+  uint64_t curr_pos;
+  for(int i=0;i<n_starts;i++)
   {
-	  pop_list(startlist, &cur_kmer_ptr, &left_ext, &right_ext);
-	  unpackSequence((unsigned char*) cur_kmer_ptr->kmer,  (unsigned char*) unpackedKmer, KMER_LENGTH);
-	  /* Initialize current contig with the seed content */
-	  memcpy(cur_contig ,unpackedKmer, KMER_LENGTH * sizeof(char));
-	  posInContig = KMER_LENGTH;
-	  right_ext = cur_kmer_ptr->r_ext;
+    curr = entries + starts[i];
+    curr_pos = curr->pos;
+    scurr = memory_heap->heap + curr_pos;
 
-	  /* Keep adding bases while not finding a terminal node */
-	  while (right_ext != 'F') {
-		cur_contig[posInContig] = right_ext;
-		posInContig++;
-		int next_pos = cur_kmer_ptr->next_kmer_pos;
-		cur_kmer_ptr = memory_heap->heap + next_pos;
-		//cur_kmer_ptr = cur_kmer_ptr->next;
-		right_ext = cur_kmer_ptr->r_ext;
-	  }
+	// pop_list(startlist, &cur_kmer_ptr, &left_ext, &right_ext);
+	unpackSequence((unsigned char*) curr->kmer,  (unsigned char*) unpackedKmer, KMER_LENGTH);
+	/* Initialize current contig with the seed content */
+	memcpy(cur_contig ,unpackedKmer, KMER_LENGTH * sizeof(char));
+	posInContig = KMER_LENGTH;
+	right_ext = curr->r_ext;
 
-	  /* Print the contig since we have found the corresponding terminal node */
-	  cur_contig[posInContig] = '\0';
-	  fprintf(output,"%s\n", cur_contig);
-	  if (i == 0) fprintf(stderr, "FIRST\n");
-	  contigID++;
-	  //totBases += strlen(cur_contig);
+	/* Keep adding bases while not finding a terminal node */
+	while (right_ext != 'F') {
+	  cur_contig[posInContig] = right_ext;
+	  posInContig++;
+	  int next_pos = scurr->next_kmer_pos;
+	  scurr = memory_heap->heap + next_pos;
+	  right_ext = scurr->r_ext;
+	}
 
-      if(!i%10000)
-        fprintf(stderr,"iteration %d\n",i);
+	/* Print the contig since we have found the corresponding terminal node */
+	cur_contig[posInContig] = '\0';
+	fprintf(output,"%s\n", cur_contig);
+	if (i == 0) fprintf(stderr, "FIRST\n");
+	contigID++;
+	//totBases += strlen(cur_contig);
+
+    if(!i%10000)
+      fprintf(stderr,"iteration %d\n",i);
 
   }
   fprintf(stderr,"done travelling salesman\n");

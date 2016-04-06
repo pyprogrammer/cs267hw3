@@ -97,10 +97,16 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
   return NULL;
 }
 
+
+const char *lol = "CAATATCATTGCGGCTATF";
 /* Adds a kmer and its extensions in the hash table (note that a memory heap should be preallocated. ) */
 shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap,
     const unsigned char *kmer, char left_ext, char right_ext)
 {
+  if(memcmp(lol,kmer,KMER_LENGTH) == 0)
+  {
+    fprintf("THREAD %d added kmer of interest %s\n",MYTHREAD,lol);
+  }
   /* Pack a k-mer sequence appropriately */
   char packedKmer[KMER_PACKED_LENGTH];
 
@@ -118,11 +124,6 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   // shared kmer_t *next_empty_kmer = (shared kmer_t*) (((shared char*) memory_heap->heap) + pos*sizeof(kmer_t));
   shared kmer_t *next_empty_kmer = memory_heap->heap + pos;
   
-  /* Add the contents to the appropriate kmer struct in the heap */
-  upc_memput(next_empty_kmer->kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
-  next_empty_kmer->l_ext = left_ext;
-  next_empty_kmer->r_ext = right_ext;
-  
   /* Fix the next pointer to point to the appropriate kmer struct */
   if(hashtable->table[hashval].head == NULL)
   {
@@ -136,6 +137,12 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
   upc_unlock(global_lock);
+
+  /* Add the contents to the appropriate kmer struct in the heap */
+  upc_memput(next_empty_kmer->kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
+  next_empty_kmer->l_ext = left_ext;
+  next_empty_kmer->r_ext = right_ext;
+  
 
   return next_empty_kmer;
 }
