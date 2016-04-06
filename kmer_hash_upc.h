@@ -77,6 +77,7 @@ shared kmer_t* lookup_kmer_upc(shared hash_table_t *hashtable, shared memory_hea
     upc_memget(&cmp,result->kmer,KMER_PACKED_LENGTH);
     // fprintf(stderr,"THREAD %d packedKmer %s || cmp %s\n",MYTHREAD,packedKmer,cmp);
     if( memcmp(packedKmer, cmp, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
+      // fprintf(stdout,"+%8d\n",result->pos);
       return result;
     }
     // fprintf(stderr,"THREAD %d memory getting\n",MYTHREAD);
@@ -111,7 +112,6 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   int64_t pos = memory_heap->posInHeap;
   /* Increase the heap pointer */
   memory_heap->posInHeap++;
-  upc_unlock(global_lock);
 
   //fprintf(stderr,"THREAD %d trying to add to pos %d\n",MYTHREAD,pos);
 
@@ -135,6 +135,7 @@ shared kmer_t* add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *me
   next_empty_kmer->pos = pos;
   /* Fix the head pointer of the appropriate bucket to point to the current kmer */
   hashtable->table[hashval].head = next_empty_kmer;
+  upc_unlock(global_lock);
 
   return next_empty_kmer;
 }

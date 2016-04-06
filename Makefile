@@ -38,3 +38,4 @@ clean :
 	rm -f *.o
 	rm -rf $(TARGETS)
 	rm -rf *.err *.out
+	rm -rf *.sorted

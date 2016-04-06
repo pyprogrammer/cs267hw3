@@ -16,6 +16,7 @@ const unsigned char *right = "F";
 
 int main()
 {
+  /*
   fprintf(stderr,"lock check start\n");
 
   shared int *t = (shared int*) upc_all_alloc(1,sizeof(int));
@@ -29,11 +30,12 @@ int main()
   upc_unlock(shitty_lock);
 
   upc_barrier;
+  */
 
   fprintf(stderr,"making a hash\n");
 
   shared memory_heap_t *mem = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
-  shared hash_table_t *tab = upc_create_hash_table(tsize*THREADS,mem);
+  shared hash_table_t *tab = upc_create_hash_table(tsize,mem);
   
   fprintf(stderr,"THREAD %d table size %d\n",MYTHREAD,tab->size);
 
@@ -66,9 +68,11 @@ int main()
   {
     if(i%THREADS == MYTHREAD)
     {
-      added = add_kmer(tab, mem, s + (i), *left, *right);
+      char *lext = (i==0) ? left : s + i - 1;
+      char *rext = (i==tsize-1) ? right : s + i + tsize;
+      added = add_kmer(tab, mem, s + (i), *lext, *rext);
       memcpy(buf,s + (i),KMER_LENGTH);
-      fprintf(stderr,"(%d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
+      fprintf(stderr,"(%3d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
     }
   }
 
@@ -78,12 +82,28 @@ int main()
   fprintf(stderr,"finding shit\n");
 
   shared kmer_t* srced;
+  kmer_t local;
+
+  unsigned char buf2[KMER_LENGTH+1];
+  buf2[KMER_LENGTH] = (unsigned char) 0;
 
   for(int i=tsize-1;i>=0;i--)
   {
+    char *lext = (i==0) ? left : s + i - 1;
+    char *rext = (i==tsize-1) ? right : s + i + tsize;
+
     memcpy(buf,(unsigned char*) sample + i,KMER_LENGTH);
     fprintf(stderr,"Thread %d looking at %s (len %d)     \n",MYTHREAD,buf,KMER_LENGTH);
     srced = lookup_kmer_upc(tab, mem, sample+i);
+    upc_memget(&local,srced,sizeof(kmer_t));
+    if ( local.l_ext != *lext  || local.r_ext != *rext)
+    {
+      unpackSequence(local.kmer, buf2, KMER_LENGTH);
+      fprintf(stderr, "THREAD %d FOUND AN ERROR! expected %c %s %c found %c %s %c\n",
+          MYTHREAD, local.l_ext, buf2, local.r_ext, *lext, buf, *rext);
+    }
+    // assert( local.l_ext == *lext );
+    // assert( local.r_ext == *rext );
     // fprintf(stderr,"I am %d: 0x%lx\n",MYTHREAD,(long int)srced);
   }
 

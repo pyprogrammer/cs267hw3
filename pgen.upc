@@ -112,7 +112,9 @@ int main(int argc, char *argv[]){
       {
         fprintf(stderr,"THREAD %d wtf there's a null %s\n",MYTHREAD,newkmer+1);
       }
+      upc_lock(global_lock);
 	  curr->next_kmer_pos = next->pos;
+      upc_unlock(global_lock);
   }
 
   fprintf(stderr,"done linking\n");
