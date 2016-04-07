@@ -1,15 +1,15 @@
 #!/bin/bash -l 
-#SBATCH -p debug
+#SBATCH -p regular
 #SBATCH -N 8
-#SBATCH -t 00:20:00 
-#SBATCH -J multi-HW3
-#SBATCH -o multi-HW3.%j.out
-#SBATCH -e multi-HW3.%j.err
+#SBATCH -t 01:30:00 
+#SBATCH -J ysg-multi-HW3
+#SBATCH -o ysg-multi-HW3.%j.out
+#SBATCH -e ysg-multi-HW3.%j.err
 
 # Specify path to your input file here
-INPUT=test
+INPUT=/project/projectdirs/mp309/cs267/largeinput
 
 cd ${PWD}
 for P in 96 120 144 168 192; do
-	srun -n $P -shared-heap=1G ./pgen ${INPUT}
+	upcrun -n $P -shared-heap=1G ./big-pgen ${INPUT}
 done

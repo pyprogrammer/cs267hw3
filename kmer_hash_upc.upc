@@ -34,7 +34,7 @@ int main()
 
   fprintf(stderr,"making a hash\n");
 
-  shared memory_heap_t *mem = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
+  shared memory_heap_t *mem = (shared memory_heap_t*) upc_all_alloc(THREADS,sizeof(memory_heap_t));
   shared hash_table_t *tab = upc_create_hash_table(tsize,mem);
   
   fprintf(stderr,"THREAD %d table size %d\n",MYTHREAD,tab->size);
@@ -72,7 +72,7 @@ int main()
       char *rext = (i==tsize-1) ? right : s + i + tsize;
       added = add_kmer(tab, mem, s + (i), *lext, *rext);
       memcpy(buf,s + (i),KMER_LENGTH);
-      fprintf(stderr,"(%3d) thread %d added %s at 0x%lx\n",i,MYTHREAD,buf,(long int)added);
+      fprintf(stderr,"(%3d) thread %d added %s at %d\n",i,MYTHREAD,buf,added->pos);
     }
   }
 
@@ -102,6 +102,9 @@ int main()
       fprintf(stderr, "THREAD %d FOUND AN ERROR! expected %c %s %c found %c %s %c\n",
           MYTHREAD, local.l_ext, buf2, local.r_ext, *lext, buf, *rext);
     }
+    unpackSequence(local.kmer, buf2, KMER_LENGTH);
+    if(strcmp(buf,buf2) != 0)
+      fprintf(stderr, "THREAD %d got an error %s %s\n",MYTHREAD,buf,buf2);
     // assert( local.l_ext == *lext );
     // assert( local.r_ext == *rext );
     // fprintf(stderr,"I am %d: 0x%lx\n",MYTHREAD,(long int)srced);

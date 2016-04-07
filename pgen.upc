@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
   input_name = argv[1];
   nKmers = getNumKmersInUFX(input_name);
   shared hash_table_t *hashtable;
-  shared memory_heap_t *memory_heap = (shared memory_heap_t*) upc_all_alloc(1,sizeof(memory_heap_t));
+  shared memory_heap_t *memory_heap = (shared memory_heap_t*) upc_all_alloc(THREADS,sizeof(memory_heap_t));
 
   hashtable = upc_create_hash_table(nKmers, memory_heap);
 
@@ -138,12 +138,14 @@ int main(int argc, char *argv[]){
   {
     curr = entries + i;
     if (curr->r_ext == 'F') continue;
-    scurr = memory_heap->heap + curr->pos;
+    shared memory_heap_t *heap = memory_heap + curr->which;
+    scurr = heap->heap + curr->pos*THREADS;
     unpackSequence(curr->kmer,newkmer,KMER_LENGTH);
     newkmer[KMER_LENGTH] = curr->r_ext;
 
     shared kmer_t* next = lookup_kmer_upc(hashtable,memory_heap,newkmer+1);
     scurr->next_kmer_pos = next->pos;
+    scurr->next_kmer_which = next->which;
   }
 
   fprintf(stderr,"done linking\n");
@@ -174,12 +176,12 @@ int main(int argc, char *argv[]){
   sprintf(outputFilename, "pgen.%d.out", MYTHREAD);
   FILE* output = fopen(outputFilename, "w");
 
-  uint64_t curr_pos;
   for(int i=0;i<n_starts;i++)
   {
     curr = entries + starts[i];
-    curr_pos = curr->pos;
-    scurr = memory_heap->heap + curr_pos;
+    int which = curr->which;
+    shared memory_heap_t *heap = memory_heap + which;
+    scurr = heap->heap + curr->pos*THREADS;
 
 	// pop_list(startlist, &cur_kmer_ptr, &left_ext, &right_ext);
 	unpackSequence((unsigned char*) curr->kmer,  (unsigned char*) unpackedKmer, KMER_LENGTH);
@@ -189,11 +191,14 @@ int main(int argc, char *argv[]){
 	right_ext = curr->r_ext;
 
 	/* Keep adding bases while not finding a terminal node */
+    int ctr = 0;
 	while (right_ext != 'F') {
 	  cur_contig[posInContig] = right_ext;
 	  posInContig++;
 	  int next_pos = scurr->next_kmer_pos;
-	  scurr = memory_heap->heap + next_pos;
+      int next_which = scurr->next_kmer_which;
+      heap = memory_heap + next_which;
+	  scurr = heap->heap + next_pos*THREADS;
 	  right_ext = scurr->r_ext;
 	}
 

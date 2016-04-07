@@ -21,7 +21,7 @@
 #endif
 
 #ifndef LOAD_FACTOR
-#define LOAD_FACTOR 1
+#define LOAD_FACTOR 1.15
 #endif
 
 #ifndef LINE_SIZE
@@ -40,12 +40,15 @@ static double gettime(void) {
 /* K-mer data structure */
 typedef struct kmer_t kmer_t;
 struct kmer_t{
-   int pos;
-   int next_pos;
    char kmer[KMER_PACKED_LENGTH];
    char l_ext;
    char r_ext;
-   int next_kmer_pos;
+   int which;
+   uint64_t pos;
+   int next_which;
+   uint64_t next_pos;
+   int next_kmer_which;
+   uint64_t next_kmer_pos;
 };
 
 /* Start k-mer data structure */
@@ -59,20 +62,21 @@ struct start_kmer_t{
 typedef struct bucket_t bucket_t;
 struct bucket_t{
    shared kmer_t *head;          // Pointer to the first entry of that bucket
+   upc_lock_t *lock;
 };
 
 /* Hash table data structure */
 typedef struct hash_table_t hash_table_t;
 struct hash_table_t {
    int64_t size;           // Size of the hash table
-   upc_lock_t *write_lock; // Write lock for UPC
+   upc_lock_t *lock; // Write lock for UPC
    shared bucket_t *table; // Entries of the hash table are pointers to buckets
 };
 
 /* Memory heap data structure */
 typedef struct memory_heap_t memory_heap_t;
 struct memory_heap_t {
-   upc_lock_t *write_lock; // Write lock for UPC
+   upc_lock_t *lock; // Write lock for UPC
    shared kmer_t *heap;
    int64_t posInHeap;
 };

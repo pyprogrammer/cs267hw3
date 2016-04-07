@@ -4,15 +4,19 @@ UPCC = upcc
 KMER_LENGTH 		= 19
 KMER_PACKED_LENGTH 	= $(shell echo $$((($(KMER_LENGTH)+3)/4)))
 
+KMER_LENGTH_BIG 		= 51
+KMER_PACKED_LENGTH_BIG 	= $(shell echo $$((($(KMER_LENGTH_BIG)+3)/4)))
+
 # Add -std=gnu99 to CFLAGS if use gnu compiler
 CFLAGS 	=  
 DEFINE 	= -DKMER_LENGTH=$(KMER_LENGTH) -DKMER_PACKED_LENGTH=$(KMER_PACKED_LENGTH)
+BIGDEFINE 	= -DKMER_LENGTH=$(KMER_LENGTH_BIG) -DKMER_PACKED_LENGTH=$(KMER_PACKED_LENGTH_BIG)
 HEADERS	= contig_generation.h kmer_hash.h packingDNAseq.h
 UPCHEADERS	= contig_upc.h kmer_hash_upc.h packingDNAseq.h
 LIBS	=
 UPCFLAGS =
 
-TARGETS	= serial pgen kh
+TARGETS	= serial pgen big-pgen
 
 all: 	$(TARGETS)
 
@@ -30,6 +34,18 @@ kh-test:
 
 check:
 	make clean && make && sbatch job-upc
+
+big-pgen:	pgen.upc $(UPCHEADERS)
+			$(UPCC) $(UPCFLAGS) -Wc,"$(CFLAGS)" -o $@ $< $(BIGDEFINE) $(LIBS)
+
+big:
+	make big-pgen && sbatch job-scale-multi-node
+
+small:
+	make pgen && sbatch job-scale-single-node
+
+scale:
+	make clean && make big && make small
 
 scratch:
 	cp ~/code/hw3/* . && make clean && make && sbatch job-upc
