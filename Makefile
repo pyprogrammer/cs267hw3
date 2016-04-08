@@ -14,7 +14,7 @@ BIGDEFINE 	= -DKMER_LENGTH=$(KMER_LENGTH_BIG) -DKMER_PACKED_LENGTH=$(KMER_PACKED
 HEADERS	= contig_generation.h kmer_hash.h packingDNAseq.h
 UPCHEADERS	= contig_upc.h kmer_hash_upc.h packingDNAseq.h
 LIBS	=
-UPCFLAGS =
+UPCFLAGS = -g
 
 TARGETS	= serial pgen big-pgen
 

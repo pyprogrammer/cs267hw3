@@ -20,7 +20,7 @@ int main(int argc, char *argv[]){
   double inputTime=0.0, constrTime=0.0, traversalTime=0.0;
   char *input_name;
   int64_t nKmers, total_chars_to_read;
-  int64_t ptr = LINE_SIZE*MYTHREAD;
+  //int64_t ptr = LINE_SIZE*MYTHREAD;
   int64_t cur_chars_read = 0;
   char* input_UFX_name = argv[1];
   FILE *inputFile;
@@ -50,12 +50,18 @@ int main(int argc, char *argv[]){
   unsigned char working_buffer[LINE_SIZE+1];
 
   total_chars_to_read = nKmers *LINE_SIZE;
-  inputFile = fopen(input_UFX_name, "b");
+  inputFile = fopen(input_UFX_name, "r");
   
-  int average_size = nKmers / THREADS;
-  int overflow = nKmers % THREADS;
-  int num_lines_read;
-  int offset; // Where to start reading
+  fseek(inputFile, 0L, SEEK_END);
+  long int sz = ftell(inputFile);
+  fseek(inputFile, 0L, SEEK_SET);
+  
+  fprintf(stderr, "File size: %ld\n", sz);
+  
+  uint64_t average_size = nKmers / THREADS;
+  uint64_t overflow = nKmers % THREADS;
+  uint64_t num_lines_read;
+  uint64_t offset; // Where to start reading
   // If MYTHREAD < Overflow, then everyone before you used overflow. thread 4 has threads 0-3 before it.
   // If MYTHREAD >= Overflow, (i.e. thread 6, with 3 overflow), then thread 0, 1, 2 have overflow
   if (MYTHREAD < overflow)
@@ -67,12 +73,14 @@ int main(int argc, char *argv[]){
 	  offset = (MYTHREAD-overflow) * average_size + overflow * (average_size + 1);
   }
   
+  fprintf(stderr, "THREAD: %d, SIZE: %d, OFFSET: %d\n", MYTHREAD, num_lines_read, offset);
   
-  
-  fseek(inputFile, offset, SEEK_SET); // Skip up to assigned location
+  fseek(inputFile, offset * LINE_SIZE, SEEK_SET); // Skip up to assigned location
   //cur_chars_read = fread(working_buffer, sizeof(unsigned char),total_chars_to_read , inputFile);
   //fclose(inputFile);
-
+  
+//  fclose(inputFile);
+//  upc_global_exit(1);
   uint64_t local_entries = (nKmers + THREADS - 1 ) / THREADS;
   kmer_t *entries = (kmer_t*) malloc(sizeof(kmer_t) * local_entries);
   uint64_t *starts =  (uint64_t*) malloc(sizeof(uint64_t) * local_entries);
@@ -91,7 +99,7 @@ int main(int argc, char *argv[]){
 	char right_ext = (char) working_buffer[KMER_LENGTH+2];
 	
 	/* Add k-mer to hash table */
-	shared kmer_t* location = add_kmer(hashtable, memory_heap, working_buffer + ptr, left_ext, right_ext); // puts in unpacked
+	shared kmer_t* location = add_kmer(hashtable, memory_heap, working_buffer, left_ext, right_ext); // puts in unpacked
 	
 	/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
 	if (left_ext == 'F') {
@@ -107,7 +115,7 @@ int main(int argc, char *argv[]){
     lines_read++;
   }
   fclose(inputFile);
-  fprintf(stderr,"done reading input (read %d %d of %d)\n",ptr,cur_chars_read,total_chars_to_read);
+  fprintf(stderr,"done reading input (read %d of %d)\n",cur_chars_read,total_chars_to_read);
 
   upc_barrier;
   inputTime += gettime();
