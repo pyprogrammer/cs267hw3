@@ -32,8 +32,12 @@ shared hash_table_t *upc_create_hash_table(int64_t nEntries, shared memory_heap_
   mytable->table = (shared bucket_t*) upc_all_alloc(n_buckets,sizeof(bucket_t));
   for(int i=0;i<n_buckets;i++)
   {
-    shared bucket_t *b = result->table + i;
+    shared bucket_t *b = mytable->table + i;
+    fprintf(stderr,"THREAD %d doing dummy op\n",MYTHREAD);
+    b->lock = NULL;
+    fprintf(stderr,"THREAD %d making a lock???\n",MYTHREAD);
     b->lock = upc_all_lock_alloc();
+    fprintf(stderr,"THREAD %d it worked!!!\n",MYTHREAD);
   }
   mytable->table = mytable->table + MYTHREAD;
   mytable = result + MYTHREAD;
